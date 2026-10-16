@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>JamDraw</title>
+<meta name="description" content="A friendly vector drawing app: pen, pressure brush, shapes, layers, swatches and SVG export. Works with a mouse, a drawing tablet or a phone stylus.">
+<meta name="theme-color" content="#16121a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand"><img src="icons/icon.svg" alt=""><span>JamDraw</span></div>
+    <div class="group">
+      <button data-act="menu" title="File menu" class="txt">File</button>
+      <button data-act="undo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5M4 12h11a5 5 0 0 1 0 10h-3"/></svg></button>
+      <button data-act="redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg viewBox="0 0 24 24"><path d="m15 7 5 5-5 5M20 12H9a5 5 0 0 0 0 10h3"/></svg></button>
+    </div>
+    <div class="group grow" id="docname" title="Document name"></div>
+    <div class="group">
+      <button data-act="zoom-out" title="Zoom out (-)" aria-label="Zoom out"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M20 20l-4-4"/></svg></button>
+      <button data-act="fit" class="txt" id="zoomlabel" title="Fit page (0)">100%</button>
+      <button data-act="zoom-in" title="Zoom in (+)" aria-label="Zoom in"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M8 11h6M11 8v6M20 20l-4-4"/></svg></button>
+    </div>
+    <div class="group panels-toggle">
+      <button data-act="sheet-style" class="txt">Style</button>
+      <button data-act="sheet-layers" class="txt">Layers</button>
+    </div>
+    <button data-act="help" title="Shortcuts and tips" aria-label="Help" class="txt">?</button>
+  </header>
+
+  <nav id="toolbar" aria-label="Tools"></nav>
+  <div id="options" aria-label="Tool options"></div>
+
+  <main id="stage">
+    <div id="artboard"></div>
+    <img id="sketch" alt="" draggable="false">
+    <canvas id="paper"></canvas>
+    <canvas id="overlay"></canvas>
+  </main>
+
+  <aside id="panel">
+    <section id="p-style">
+      <h2>Color</h2>
+      <div class="chips">
+        <button class="chip" data-chip="fill"><span class="sw"></span>Fill</button>
+        <button class="chip" data-chip="stroke"><span class="sw"></span>Stroke</button>
+        <button data-act="swap-colors" title="Swap fill and stroke (X)" aria-label="Swap"><svg viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg></button>
+      </div>
+      <div class="row">
+        <input type="color" id="colorpick" aria-label="Pick color">
+        <input type="text" id="hex" maxlength="9" spellcheck="false" aria-label="Hex color">
+        <button data-act="color-none" class="txt" title="No color">None</button>
+      </div>
+      <div class="swatches" id="swatches"></div>
+      <h2>Stroke and look</h2>
+      <label class="row">Width <input type="range" id="sw-range" min="0" max="80" step="0.5"><input type="number" id="sw-num" min="0" max="400" step="0.5"></label>
+      <label class="row">Opacity <input type="range" id="op-range" min="0" max="100" step="1"><span id="op-num">100%</span></label>
+      <h2>Arrange</h2>
+      <div class="btns" id="arrange"></div>
+      <h2>Combine shapes</h2>
+      <div class="btns" id="combine"></div>
+      <h2>Align</h2>
+      <div class="btns" id="align"></div>
+    </section>
+    <section id="p-layers">
+      <h2>Layers</h2>
+      <div class="btns">
+        <button data-act="layer-add" class="txt">+ Layer</button>
+        <button data-act="layer-del" class="txt">Delete</button>
+        <button data-act="layer-up" class="txt">Up</button>
+        <button data-act="layer-down" class="txt">Down</button>
+        <button data-act="layer-move-sel" class="txt" title="Move the selection to the active layer">Move here</button>
+      </div>
+      <ul id="layers"></ul>
+      <h2>Sketch to trace</h2>
+      <div class="btns">
+        <button data-act="sketch-load" class="txt">Load image</button>
+        <button data-act="sketch-toggle" class="txt" id="sketch-toggle">Hide</button>
+        <button data-act="sketch-move" class="txt" id="sketch-move">Move</button>
+        <button data-act="sketch-clear" class="txt">Remove</button>
+      </div>
+      <label class="row">Opacity <input type="range" id="sk-op" min="5" max="100" step="1"></label>
+      <label class="row">Size <input type="range" id="sk-scale" min="5" max="400" step="1"></label>
+    </section>
+  </aside>
+</div>
+
+<div id="menu" class="popup" hidden>
+  <button data-act="new">New</button>
+  <button data-act="open">Open (.jamdraw or .svg)</button>
+  <button data-act="place">Place SVG into this drawing</button>
+  <button data-act="save">Save .jamdraw file</button>
+  <hr>
+  <button data-act="export-svg">Export SVG</button>
+  <button data-act="export-png" data-size="512">Export PNG 512</button>
+  <button data-act="export-png" data-size="1024">Export PNG 1024</button>
+  <button data-act="export-png" data-size="2048">Export PNG 2048</button>
+  <hr>
+  <button data-act="doc-settings">Page size and background</button>
+</div>
+
+<dialog id="dlg"><form method="dialog" id="dlg-body"></form></dialog>
+<input type="file" id="file" hidden>
+<div id="toast" role="status"></div>
+
+<script src="vendor/paper-core.min.js"></script>
+<script src="vendor/paperjs-offset.min.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,139 @@
+// The canvas view: zoom, pan, fit, the page (artboard) and sketch layers under the drawing, and the overlay canvas
+// where selection boxes, handles and previews are drawn in screen space.
+import { S, clamp, emit } from './state.js';
+
+export const stage = document.getElementById('stage');
+const paperCanvas = document.getElementById('paper');
+export const overlay = document.getElementById('overlay');
+const artboard = document.getElementById('artboard');
+const sketchImg = document.getElementById('sketch');
+const octx = overlay.getContext('2d');
+let drawOverlayFn = () => {};
+
+export function initView(drawFn) {
+  drawOverlayFn = drawFn;
+  paper.setup(paperCanvas);
+  new ResizeObserver(resize).observe(stage);
+  resize();
+}
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
+  const first = !paper.view.viewSize || paper.view.viewSize.width < 2;
+  paper.view.viewSize = new paper.Size(w, h);
+  const dpr = window.devicePixelRatio || 1;
+  overlay.width = Math.round(w * dpr);
+  overlay.height = Math.round(h * dpr);
+  if (first) fit(); else changed();
+}
+
+export const zoom = () => paper.view.zoom;
+export const px = (n) => n / paper.view.zoom; // screen pixels -> drawing units
+
+export function toProject(clientX, clientY) {
+  const r = stage.getBoundingClientRect();
+  return paper.view.viewToProject(new paper.Point(clientX - r.left, clientY - r.top));
+}
+export function toView(pt) { return paper.view.projectToView(pt); }
+
+export function zoomAt(viewPt, factor) {
+  const v = paper.view;
+  const before = v.viewToProject(viewPt);
+  v.zoom = clamp(v.zoom * factor, 0.03, 64);
+  const after = v.viewToProject(viewPt);
+  v.center = v.center.add(before.subtract(after));
+  changed();
+}
+export function zoomCenter(factor) { zoomAt(new paper.Point(stage.clientWidth / 2, stage.clientHeight / 2), factor); }
+export function panBy(dx, dy) {
+  paper.view.center = paper.view.center.subtract(new paper.Point(dx, dy).divide(paper.view.zoom));
+  changed();
+}
+export function fit() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  if (!w || !h) return;
+  paper.view.zoom = Math.min(w / S.doc.w, h / S.doc.h) * 0.88;
+  paper.view.center = new paper.Point(S.doc.w / 2, S.doc.h / 2);
+  changed();
+}
+
+// Keep the HTML layers (page, sketch) lined up with the drawing and redraw the overlay.
+export function changed() {
+  const m = paper.view.matrix;
+  const css = (mm) => `matrix(${mm.a},${mm.b},${mm.c},${mm.d},${mm.tx},${mm.ty})`;
+  artboard.style.width = S.doc.w + 'px';
+  artboard.style.height = S.doc.h + 'px';
+  artboard.style.transform = css(m);
+  artboard.classList.toggle('transparent', S.doc.transparent);
+  const sk = S.sketch;
+  if (sk && sk.src) {
+    if (sketchImg.getAttribute('src') !== sk.src) sketchImg.src = sk.src;
+    sketchImg.style.display = sk.visible ? 'block' : 'none';
+    sketchImg.style.opacity = sk.opacity;
+    const sm = m.clone().translate(sk.x, sk.y).scale(sk.scale);
+    sketchImg.style.transform = css(sm);
+  } else {
+    sketchImg.style.display = 'none';
+    sketchImg.removeAttribute('src');
+  }
+  emit('zoom', paper.view.zoom);
+  redrawOverlay();
+}
+
+let pending = false;
+export function redrawOverlay() {
+  if (pending) return;
+  pending = true;
+  requestAnimationFrame(() => {
+    pending = false;
+    const dpr = window.devicePixelRatio || 1;
+    octx.setTransform(1, 0, 0, 1, 0, 0);
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+    octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawOverlayFn(octx);
+  });
+}
+
+// Drawing helpers for the overlay (screen space).
+export const UI_COLOR = '#2f8cff';
+export function strokeItemOutline(ctx, item, color = UI_COLOR) {
+  const m = paper.view.matrix;
+  const dpr = window.devicePixelRatio || 1;
+  const paths = [];
+  const walk = (it) => {
+    if (it instanceof paper.Path) paths.push(it);
+    else if (it.children) it.children.forEach(walk);
+  };
+  walk(item);
+  ctx.save();
+  ctx.setTransform(m.a * dpr, m.b * dpr, m.c * dpr, m.d * dpr, m.tx * dpr, m.ty * dpr);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1 / paper.view.zoom;
+  for (const p of paths) {
+    // Paths inside groups carry their own matrix only when applyMatrix is off; pathData is in the item's space.
+    const g = p.globalMatrix;
+    ctx.save();
+    ctx.transform(g.a, g.b, g.c, g.d, g.tx, g.ty);
+    ctx.lineWidth = 1 / (paper.view.zoom * Math.sqrt(Math.abs(g.a * g.d - g.b * g.c)) || 1);
+    ctx.stroke(new Path2D(p.pathData));
+    ctx.restore();
+  }
+  ctx.restore();
+}
+export function handleBox(ctx, p, size = 8, fill = '#fff', stroke = UI_COLOR) {
+  ctx.fillStyle = fill;
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 1.5;
+  ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
+  ctx.strokeRect(p.x - size / 2, p.y - size / 2, size, size);
+}
+export function handleDot(ctx, p, r = 4, fill = '#fff', stroke = UI_COLOR) {
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
