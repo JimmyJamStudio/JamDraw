@@ -45,6 +45,20 @@
 
   <aside id="panel">
     <section id="p-style">
+      <h2>Position and size</h2>
+      <div class="xform" id="xform">
+        <label title="Left edge">X <input type="number" id="tf-x" step="any"></label>
+        <label title="Top edge">Y <input type="number" id="tf-y" step="any"></label>
+        <button id="tf-lock" aria-pressed="true" title="Keep proportions when changing W or H" aria-label="Keep proportions"><svg viewBox="0 0 24 24"><path d="M9 17H7a5 5 0 0 1 0-10h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8"/></svg></button>
+        <label title="Width">W <input type="number" id="tf-w" step="any" min="0"></label>
+        <label title="Height">H <input type="number" id="tf-h" step="any" min="0"></label>
+        <label title="Angle in degrees">Angle <input type="number" id="tf-a" step="any"></label>
+      </div>
+      <div class="snaps">
+        <label><input type="checkbox" id="snap-on"> Snap to page and shapes</label>
+        <label><input type="checkbox" id="grid-on"> Grid <input type="number" id="grid-size" min="2" max="1024" step="1" aria-label="Grid spacing"> px</label>
+        <span class="hint">Hold Ctrl while dragging to place freely</span>
+      </div>
       <h2>Color</h2>
       <div class="chips">
         <button class="chip" data-chip="fill"><span class="sw"></span>Fill</button>

@@ -10,6 +10,9 @@ Jimmy Jam Studio to draw our own logo and art; offered as-is, free to use (MIT).
   Fantasy, Sans and Serif, every one free for commercial use (OFL or Apache, `fonts/LICENSES.md`); load your own
   TTF, OTF or WOFF too. Text is real vector outlines from the start, stays editable (font, size, spacing, lines,
   alignment) and turns into plain shapes for point editing
+- **Exact and lined up:** X, Y, width, height and angle boxes for the selection (with a lock for proportions);
+  snapping to the page's edges and center and to other shapes' edges and centers, with pink guides, plus an optional
+  grid; hold Ctrl while dragging to place freely
 - **Edit:** move, scale, rotate, flip, group, arrange, point and curve-handle editing, combine shapes (unite,
   subtract, intersect, exclude), outline a stroke, and **Sticker outline** (one solid outline under the selection: the
   cartoon-logo look), align to each other or to the page
@@ -47,6 +50,7 @@ width, turn on *Use Windows Ink* in the tablet's settings (Wacom: Wacom Tablet P
 | `Ctrl+G` / `Ctrl+Shift+G` | Group / ungroup |
 | `[` `]`, `Ctrl+[` `Ctrl+]` | Backward, forward; to back, to front |
 | Arrows | Nudge (Shift: 10x) |
+| Ctrl + drag | Place freely, without snapping |
 | `X` | Swap fill and stroke |
 | `Ctrl+S` / `Ctrl+E` | Save a .jamdraw file / Export |
 | Double-click a text | Edit it (`Ctrl+Enter` done, `Esc` cancel) |
@@ -77,6 +81,7 @@ code. `CHROME_PATH` picks the browser; screenshots, exported files and `coverage
 | `index.html`, `css/app.css` | The page and its look (desktop: side panels; under 820 px: tools at the bottom, panels as sheets) |
 | `js/main.js` | Boot, pointer input (mouse, pen, touch, pinch, palm rejection), keyboard shortcuts |
 | `js/tools.js` | The tools: select, points, pen, brush, eraser, shapes, text, eyedropper, hand |
+| `js/snap.js`, `js/transform.js` | Snapping and guides; the Position and size boxes |
 | `js/actions.js` | Things done to the selection: arrange, group, align, combine, outline stroke, sticker outline |
 | `js/text.js`, `js/textui.js` | Fonts and text layout (opentype.js), the text panel and font browser |
 | `js/export.js` | Export dialog and SVG / PNG / JPG / WebP / PDF output |

@@ -64,6 +64,16 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 .row { display: flex; align-items: center; gap: 8px; margin: 6px 0; color: var(--dim); }
 .row input[type="number"] { width: 64px; }
 .row #hex { flex: 1; font-family: ui-monospace, monospace; }
+.xform { display: grid; grid-template-columns: 1fr 1fr 34px; gap: 6px; align-items: center; }
+.xform label { display: flex; align-items: center; gap: 6px; color: var(--dim); min-width: 0; }
+.xform input { width: 100%; }
+.xform input:disabled { opacity: .45; }
+#tf-lock { grid-row: span 2; min-height: 0; height: 100%; }
+#tf-lock[aria-pressed="false"] { background: var(--panel-2); border-color: var(--line); color: var(--dim); }
+.snaps { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; color: var(--dim); }
+.snaps label { display: flex; align-items: center; gap: 6px; }
+.snaps input[type="number"] { width: 64px; }
+.snaps .hint { font-size: 12px; }
 .chips { display: flex; gap: 6px; }
 .chip { flex: 1; justify-content: flex-start; }
 .chip.on { outline: 2px solid var(--jam-2); outline-offset: 1px; background: var(--panel-2); color: var(--text); }

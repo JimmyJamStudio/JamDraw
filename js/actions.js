@@ -81,7 +81,10 @@ export function arrange(how) {
 export function flip(axis) {
   if (!need()) return;
   const c = unionBounds(S.sel).center;
-  S.sel.forEach((it) => it.scale(axis === 'h' ? -1 : 1, axis === 'v' ? -1 : 1, c));
+  S.sel.forEach((it) => {
+    it.scale(axis === 'h' ? -1 : 1, axis === 'v' ? -1 : 1, c);
+    if (it.data.angle) it.data.angle = -it.data.angle; // a mirrored turn turns the other way
+  });
   done();
 }
 

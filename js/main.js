@@ -5,14 +5,19 @@ import { initView, toProject, zoomAt, zoomCenter, panBy, fit, changed, redrawOve
 import { TOOLS, setSelection, deleteNodes } from './tools.js';
 import * as A from './actions.js';
 import { restoreAutosave, scheduleAutosave, saveFile } from './store.js';
+import { drawGrid, drawGuides } from './snap.js';
 import { buildUI, setTool, act } from './ui.js';
 import { loadFontList } from './text.js';
 import { initTextUI } from './textui.js';
 import { exportDialog } from './export.js';
 
 function drawOverlay(ctx) {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  drawGrid(ctx, w, h);
   const t = TOOLS[S.tool];
   if (t.overlay) t.overlay(ctx);
+  drawGuides(ctx, w, h);
+  emit('frame'); // the Position and size boxes follow along
   // Brush and eraser size ring under the pen or mouse.
   if ((S.tool === 'brush' || S.tool === 'eraser') && hover && !active) {
     const size = S.tool === 'brush' ? S.brush.size : S.eraser.size;
@@ -161,8 +166,9 @@ const KEY_TOOLS = { v: 'select', a: 'node', p: 'pen', b: 'brush', e: 'eraser', r
 
 window.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
-  // Not while typing, or under a pop-up dialog (the floating text panel doesn't block shortcuts).
-  if (tag === 'input' || tag === 'textarea' || tag === 'select' || document.getElementById('dlg').open) return;
+  // Not while typing (a ticked checkbox doesn't count), or under a pop-up dialog (the text panel doesn't block them).
+  const typing = tag === 'textarea' || tag === 'select' || (tag === 'input' && e.target.type !== 'checkbox');
+  if (typing || document.getElementById('dlg').open) return;
   const k = e.key.toLowerCase();
   const ctrl = e.ctrlKey || e.metaKey;
   if (e.key === ' ') {

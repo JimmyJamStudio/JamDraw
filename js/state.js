@@ -19,6 +19,8 @@ export const S = {
   swatches: DEFAULT_SWATCHES.slice(),
   sketch: null,             // { src, x, y, scale, opacity, visible }
   sketchMove: false,
+  snap: { on: true, grid: false, size: 32 }, // snap to the page and shapes; the grid, and its spacing
+  guides: null,             // what just snapped: { x, y } in drawing units, for the overlay
   sawPen: false,            // after a pen touches the screen, fingers only pan and zoom
   sel: [],                  // selected top-level items (select tool)
   node: { path: null, segs: new Set() }, // direct-select tool
@@ -29,6 +31,8 @@ export function on(name, fn) { (handlers[name] ||= []).push(fn); }
 export function emit(name, data) { (handlers[name] || []).forEach((fn) => fn(data)); }
 
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// An angle in degrees, between -180 and 180.
+export const normAngle = (a) => ((((a + 180) % 360) + 360) % 360) - 180;
 
 let toastTimer = 0;
 export function toast(msg) {

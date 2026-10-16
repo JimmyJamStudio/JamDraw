@@ -8,6 +8,7 @@ import * as F from './store.js';
 import { fit, zoomCenter, changed, redrawOverlay, overlay } from './view.js';
 import { exportDialog, quickExport } from './export.js';
 import { isText, bakeAll } from './text.js';
+import { buildTransform } from './transform.js';
 
 const $ = (s) => document.querySelector(s);
 const ICON = {
@@ -402,6 +403,7 @@ function help() {
     ['Ctrl+G / Ctrl+Shift+G', 'Group / ungroup'],
     ['[ ] / Ctrl+[ ]', 'Backward, forward / to back, to front'],
     ['Arrows', 'Nudge (Shift: 10×)'],
+    ['Ctrl + drag', 'Place freely, without snapping'],
     ['X', 'Swap fill and stroke'],
     ['Del', 'Delete the selection or selected points'],
     ['Enter / Esc', 'Finish a pen path · Esc also deselects'],
@@ -464,6 +466,7 @@ export function buildUI() {
   buildPanelButtons();
   buildLayers();
   buildSketch();
+  buildTransform();
   on('tool', buildOptions);
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]');

@@ -37,6 +37,7 @@ export function serialize() {
     app: 'JamDraw', version: 1,
     doc: S.doc, swatches: S.swatches, sketch: S.sketch,
     style: { fill: S.fill, stroke: S.stroke, strokeWidth: S.strokeWidth },
+    snap: S.snap,
     active: paper.project.activeLayer.index,
     project: paper.project.exportJSON({ asString: false }),
   };
@@ -51,6 +52,7 @@ function load(data) {
   S.swatches = data.swatches && data.swatches.length ? data.swatches : DEFAULT_SWATCHES.slice();
   S.sketch = data.sketch || null;
   if (data.style) Object.assign(S, data.style);
+  if (data.snap) Object.assign(S.snap, data.snap);
   S.sel = [];
   S.node.path = null;
   S.node.segs.clear();

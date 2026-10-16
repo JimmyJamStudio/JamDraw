@@ -1,9 +1,9 @@
 // Offline support: network first for the page, then cache; everything else cache first.
 // Bump VERSION when files change so installed apps pick up the new ones.
-const VERSION = 'jamdraw-v3';
+const VERSION = 'jamdraw-v4';
 const FILES = [
   './', 'index.html', 'css/app.css', 'manifest.webmanifest',
-  'js/main.js', 'js/state.js', 'js/history.js', 'js/view.js', 'js/tools.js', 'js/actions.js', 'js/store.js', 'js/ui.js', 'js/text.js', 'js/textui.js', 'js/export.js',
+  'js/main.js', 'js/state.js', 'js/history.js', 'js/view.js', 'js/tools.js', 'js/actions.js', 'js/store.js', 'js/ui.js', 'js/text.js', 'js/textui.js', 'js/export.js', 'js/snap.js', 'js/transform.js',
   'vendor/paper-core.min.js', 'vendor/paperjs-offset.min.js', 'vendor/opentype.min.js', 'fonts/fonts.json',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png',
 ];

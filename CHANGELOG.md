@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.4.0 - 2026-10-16
+
+Exact sizes and snapping, for lining things up (a pair of eyes that match).
+
+### Added
+- **Position and size** (top of the Style panel, `js/transform.js`): X, Y, W, H and Angle of the selection in drawing
+  units, following along live while you drag. Type a number and press Enter (or leave the box). The lock keeps
+  proportions when changing W or H (on by default). Angle is kept per shape (`data.angle`): the rotate handle and
+  the box both update it, Flip mirrors it, several shapes at different angles show 0 and a new angle turns each by
+  that much. A straight line has no width or height to scale, and says so.
+- **Snapping** (`js/snap.js`, on by default): moving, scaling from a handle, drawing shapes, placing pen points and
+  dragging points or whole paths snap edges and centers to the page's edges and center and to other shapes' edges
+  and centers, within 7 screen pixels, with pink guide lines. **Hold Ctrl while dragging to place freely.**
+- **Grid** (off by default, any size from 2 to 1024): drawn over the page when it's at least 6 screen pixels apart,
+  and things snap to it as well. Snap and grid settings are saved with the drawing.
+
+### Fixed
+- After clicking a checkbox, keyboard shortcuts stayed off until you clicked somewhere else; only typing in a box
+  pauses them now.
+
+### Tests
+- `suite-10-transform.cjs`: every box, the lock, angles, flat lines, live updates, and snapping for move, scale,
+  shapes, pen, points and paths, Ctrl, page center, grid on its own, grid limits, saved settings. 100% coverage kept.
+
 ## 0.3.0 - 2026-10-16
 
 Tests for everything (100% coverage), and the bugs they found.

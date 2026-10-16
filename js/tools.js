@@ -1,9 +1,10 @@
 // The drawing tools. Each gets pointer events in drawing coordinates (ev.pt) and screen coordinates (ev.vp),
 // with pen pressure in ev.pressure (1 for a mouse), and may draw hints on the overlay.
-import { S, emit, toast, isEditable, topItem, editableLayer, unionBounds, setStyle } from './state.js';
+import { S, emit, toast, isEditable, topItem, editableLayer, unionBounds, setStyle, normAngle } from './state.js';
 import { commit } from './history.js';
 import { px, toView, redrawOverlay, strokeItemOutline, handleBox, handleDot, overlay, UI_COLOR } from './view.js';
 import { isText, bake, bakeAll } from './text.js';
+import { snapPoint, snapRect, clearGuides } from './snap.js';
 
 export function setSelection(items) {
   S.sel = items.filter(Boolean);
@@ -63,12 +64,12 @@ const select = {
   down(ev) {
     this.mode = null;
     this.start = ev.pt;
-    this.last = ev.pt;
+    this.b0 = null;
+    this.moved = new paper.Point(0, 0);
     this.changed = false;
     const h = handleAt(ev.vp);
     if (h) {
       const b = selBounds();
-      this.origB = b;
       if (h.kind === 'scale') {
         this.mode = 'scale';
         this.hi = h.i;
@@ -106,11 +107,16 @@ const select = {
         setSelection(S.sel.map((it) => it.clone()));
         this.dup = false;
       }
-      const d = pt.subtract(this.last);
-      S.sel.forEach((it) => it.translate(d));
+      // Move by the total drag, nudged so an edge or center snaps; translate only the difference from last time.
+      this.b0 ||= selBounds();
+      const want = pt.subtract(this.start);
+      const total = want.add(snapRect(new paper.Rectangle(this.b0.point.add(want), this.b0.size), ev, S.sel));
+      S.sel.forEach((it) => it.translate(total.subtract(this.moved)));
+      this.moved = total;
       this.changed = true;
     } else if (this.mode === 'scale') {
       const i = this.hi, a = this.anchor, f = this.from;
+      const pt = snapPoint(ev.pt, ev, S.sel);
       const xAxis = i !== 1 && i !== 5, yAxis = i !== 3 && i !== 7;
       let sx = xAxis && Math.abs(f.x - a.x) > 1e-6 ? (pt.x - a.x) / (f.x - a.x) : 1;
       let sy = yAxis && Math.abs(f.y - a.y) > 1e-6 ? (pt.y - a.y) / (f.y - a.y) : 1;
@@ -134,10 +140,11 @@ const select = {
     } else if (this.mode === 'marquee') {
       this.rect = new paper.Rectangle(this.start, pt);
     }
-    this.last = pt;
     redrawOverlay();
   },
   up(ev) {
+    clearGuides();
+    if (this.mode === 'rotate') S.sel.forEach((it) => { it.data.angle = normAngle((it.data.angle || 0) + this.applied); });
     if (this.mode === 'marquee' && this.rect && (this.rect.width > px(3) || this.rect.height > px(3))) {
       const r = this.rect;
       const hits = allEditableTopItems().filter((it) => r.intersects(it.bounds));
@@ -152,7 +159,7 @@ const select = {
     const h = handleAt(ev.vp);
     overlay.style.cursor = h ? (h.kind === 'scale' ? CURSORS[h.i] : 'grab') : 'default';
   },
-  cancel() { this.mode = null; this.rect = null; },
+  cancel() { this.mode = null; this.rect = null; clearGuides(); },
   overlay(ctx) {
     for (const it of S.sel) strokeItemOutline(ctx, it);
     const b = selBounds();
@@ -209,7 +216,7 @@ const node = {
   cursor: 'default',
   down(ev) {
     this.mode = null;
-    this.last = ev.pt;
+    this.p0 = ev.pt;
     this.changed = false;
     const h = nodeHandleAt(ev.vp);
     if (h) {
@@ -219,6 +226,9 @@ const node = {
         else if (!segs.has(h.seg)) { segs.clear(); segs.add(h.seg); }
         if (ev.detail >= 2) { toggleSmooth(h.seg); commit(); }
         this.mode = 'points';
+        // The point under the pointer leads (and snaps); the other selected points keep their distance to it.
+        this.lead = h.seg.point.clone();
+        this.starts = new Map([...segs].map((s) => [s, s.point.clone()]));
       } else {
         this.mode = 'handle';
         this.h = h;
@@ -247,6 +257,8 @@ const node = {
     if (path) {
       if (path !== S.node.path) { S.node.path = path; S.node.segs.clear(); }
       this.mode = 'path';
+      this.b0 = path.bounds;
+      this.moved = new paper.Point(0, 0);
       emit('selection');
       redrawOverlay();
       return;
@@ -259,12 +271,15 @@ const node = {
     redrawOverlay();
   },
   drag(ev) {
-    const d = ev.pt.subtract(this.last);
+    const want = ev.pt.subtract(this.p0);
     if (this.mode === 'points') {
-      for (const s of S.node.segs) s.point = s.point.add(d);
+      const d = snapPoint(this.lead.add(want), ev, [topItem(S.node.path)]).subtract(this.lead);
+      for (const [s, p] of this.starts) s.point = p.add(d);
       this.changed = true;
     } else if (this.mode === 'path') {
-      S.node.path.translate(d);
+      const total = want.add(snapRect(new paper.Rectangle(this.b0.point.add(want), this.b0.size), ev, [topItem(S.node.path)]));
+      S.node.path.translate(total.subtract(this.moved));
+      this.moved = total;
       this.changed = true;
     } else if (this.mode === 'handle') {
       const { seg, which } = this.h;
@@ -280,10 +295,10 @@ const node = {
     } else if (this.mode === 'marquee') {
       this.rect = new paper.Rectangle(this.start, ev.pt);
     }
-    this.last = ev.pt;
     redrawOverlay();
   },
   up() {
+    clearGuides();
     if (this.mode === 'marquee' && this.rect && S.node.path) {
       for (const s of S.node.path.segments) if (this.rect.contains(s.point)) S.node.segs.add(s);
       emit('selection');
@@ -384,6 +399,7 @@ const pen = {
       return;
     }
     if (ev.shift && segs.length) pt = snap45(segs[segs.length - 1].point, pt);
+    else pt = snapPoint(pt, ev, [this.path]);
     this.seg = this.path.add(pt);
   },
   drag(ev) {
@@ -399,6 +415,7 @@ const pen = {
     redrawOverlay();
   },
   up() {
+    clearGuides();
     if (this.closing) { this.closing = false; this.finish(); }
     this.seg = null;
     redrawOverlay();
@@ -646,12 +663,12 @@ const shape = {
   cursor: 'crosshair',
   down(ev) {
     this.layer = activeLayer();
-    this.start = ev.pt;
+    this.start = snapPoint(ev.pt, ev, []);
     this.item = null;
   },
   drag(ev) {
     if (!this.layer) return;
-    let a = this.start, b = ev.pt;
+    let a = this.start, b = snapPoint(ev.pt, ev, [this.item]);
     let w = b.x - a.x, h = b.y - a.y;
     if (ev.shift) { const m = Math.max(Math.abs(w), Math.abs(h)); w = Math.sign(w || 1) * m; h = Math.sign(h || 1) * m; }
     let rect = ev.alt ? new paper.Rectangle(a.subtract([w, h]), a.add([w, h])) : new paper.Rectangle(a, a.add([w, h]));
@@ -664,6 +681,7 @@ const shape = {
     redrawOverlay();
   },
   up() {
+    clearGuides();
     if (this.item) { commit(); setSelection([this.item]); }
     this.item = null;
     this.layer = null;
