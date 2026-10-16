@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.3.0 - 2026-10-16
+
+Tests for everything (100% coverage), and the bugs they found.
+
+### Fixed
+- **The eraser deleted a whole line when you erased part of it.** Paper.js returns nothing when an open path is cut
+  the normal way; lines now use `trace: false` and keep both ends (also lines already cut once).
+- **Smooth points kinked when you dragged a handle.** Paper's handle objects are live, so "was it smooth?" was checked
+  against the new position; the old handle is copied first now. Alt still breaks a point on purpose.
+- **From the second text on, typing went to the shortcuts** (the "a" in "Jam" switched to the Points tool). With the
+  font already loaded, the panel focused its box before the browser finished the click, which then took focus back;
+  canvas clicks no longer move focus.
+- **Shortcuts didn't work while the text panel was open,** even outside its boxes. Only pop-up dialogs block them now.
+- **Moving a layer up or down made a different layer active.**
+- **Cancel on a text whose font is gone crashed;** Cancel now puts back the exact outlines, no font needed.
+- **Clicking inside a compound shape with Points always picked its first piece.**
+- **PDF export stayed broken for the session if its tools failed to load once** (offline); the next try loads them.
+- **A file that couldn't be read failed silently;** it says so now. Copying SVG when the browser blocks it says to use
+  Export instead.
+- Font previews follow your text as you type.
+
+### Changed
+- Dead code removed (a dozen checks for situations the app can't get into, unused helpers); the file-name rule lives
+  in one place (`fileName` in state.js); export clones carry their layer's opacity.
+
+### Tests
+- `tests/run.cjs` runs every `tests/suite-*.cjs` from a fresh drawing and reports V8 block coverage for each file in
+  js/ (snapshotted before every reload, since Chrome drops counts on navigation), with the exact code any test missed.
+  `--only=name`, `--min=100`. 375+ checks, about 1.5 minutes: select, actions, tools, interface, files, text,
+  export and phone suites, plus failure cases (blocked storage, failing database, missing fonts, the PDF tools not
+  loading, a refused image) and working offline with the server switched off.
+
 ## 0.2.0 - 2026-10-16
 
 Text with a font library, and proper export.

@@ -1,6 +1,6 @@
 // Export: SVG, PNG, JPG, WebP and PDF, of the whole page, just the selection, or the drawing trimmed to its edges,
 // at any size, with or without a background. Settings are remembered between exports.
-import { S, toast, zOrder } from './state.js';
+import { S, toast, zOrder, fileName } from './state.js';
 
 const KEY = 'jamdraw.export';
 const FORMATS = { svg: 'SVG', png: 'PNG', jpg: 'JPG', webp: 'WebP', pdf: 'PDF' };
@@ -9,7 +9,6 @@ let opts = { format: 'svg', area: 'page', width: 1024, bg: 'auto', bgColor: '#ff
 try { Object.assign(opts, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { /* private window */ }
 const remember = () => { try { localStorage.setItem(KEY, JSON.stringify(opts)); } catch { /* fine */ } };
 
-const safeName = () => (S.doc.name || 'drawing').replace(/[^\w\- ]+/g, '').trim() || 'drawing';
 function download(name, blob) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -22,14 +21,11 @@ function download(name, blob) {
 
 // The items to export, as clones (hidden layers and items left out).
 function exportItems(area) {
-  const src = area === 'selection'
-    ? zOrder(S.sel)
-    : paper.project.layers.filter((l) => l.visible).flatMap((l) => l.children.filter((c) => c.visible).map((c) => ({ c, op: l.opacity })));
+  const src = area === 'selection' ? zOrder(S.sel) : paper.project.layers.filter((l) => l.visible).flatMap((l) => l.children.filter((c) => c.visible));
   const g = new paper.Group({ insert: false });
-  for (const s of src) {
-    const it = s.c || s;
+  for (const it of src) {
     const k = it.clone({ insert: false });
-    if (s.op != null && s.op < 1) k.opacity *= s.op;
+    k.opacity *= it.layer.opacity; // the layer's own opacity carries over
     g.addChild(k);
   }
   return g;
@@ -89,7 +85,8 @@ function loadScript(src) {
   });
 }
 async function pdfBlob({ svg, w, h }) {
-  pdfLibs ||= loadScript('vendor/jspdf.umd.min.js').then(() => loadScript('vendor/svg2pdf.umd.min.js'));
+  // If loading fails (offline before they were cached), forget it so the next try loads them again.
+  pdfLibs ||= loadScript('vendor/jspdf.umd.min.js').then(() => loadScript('vendor/svg2pdf.umd.min.js')).catch((e) => { pdfLibs = null; throw e; });
   await pdfLibs;
   const el = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
   const holder = document.createElement('div');
@@ -108,7 +105,7 @@ async function pdfBlob({ svg, w, h }) {
 
 export async function runExport(o = opts) {
   const built = buildSVG(o);
-  const name = safeName() + (o.area === 'selection' ? '-selection' : '');
+  const name = fileName() + (o.area === 'selection' ? '-selection' : '');
   if (o.format === 'svg') return download(name + '.svg', new Blob([built.svg], { type: 'image/svg+xml' }));
   // Saved as a plain download: Chrome would otherwise open a PDF in its viewer instead of saving it.
   if (o.format === 'pdf') return download(name + '.pdf', new Blob([await pdfBlob(built)], { type: 'application/octet-stream' }));
@@ -187,14 +184,13 @@ export function exportDialog() {
       return;
     }
     if (b.dataset.x === 'copy') {
-      try { await navigator.clipboard.writeText(buildSVG(opts).svg); toast('SVG code copied'); } catch (err) { toast(err.message || 'Copy failed'); }
+      try { await navigator.clipboard.writeText(buildSVG(opts).svg); toast('SVG code copied'); } catch { toast('Copying is blocked here; use Export instead'); }
       return;
     }
     sync();
   };
   f.oninput = (e) => {
-    const t = e.target;
-    if (!t.name) return;
+    const t = e.target; // every input in the dialog has a name
     opts[t.name] = t.type === 'number' || t.type === 'range' ? +t.value : t.value;
     if (t.name === 'quality') f.querySelector('.ex-qv').textContent = t.value;
     sync();

@@ -1,5 +1,5 @@
 // Saving: autosave in the browser (IndexedDB), .jamdraw files, SVG and PNG export, opening and placing SVGs.
-import { S, emit, toast, DEFAULT_SWATCHES } from './state.js';
+import { S, emit, toast, DEFAULT_SWATCHES, fileName } from './state.js';
 import { resetHistory, commit } from './history.js';
 import { fit, changed } from './view.js';
 
@@ -37,7 +37,7 @@ export function serialize() {
     app: 'JamDraw', version: 1,
     doc: S.doc, swatches: S.swatches, sketch: S.sketch,
     style: { fill: S.fill, stroke: S.stroke, strokeWidth: S.strokeWidth },
-    active: paper.project.activeLayer ? paper.project.activeLayer.index : 0,
+    active: paper.project.activeLayer.index,
     project: paper.project.exportJSON({ asString: false }),
   };
 }
@@ -79,12 +79,10 @@ export function newDoc() {
   scheduleAutosave();
 }
 
-const safeName = () => (S.doc.name || 'drawing').replace(/[^\w\- ]+/g, '').trim() || 'drawing';
-
 export function saveFile() {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([JSON.stringify(serialize())], { type: 'application/json' }));
-  a.download = safeName() + '.jamdraw';
+  a.download = fileName() + '.jamdraw';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }

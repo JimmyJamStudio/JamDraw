@@ -13,7 +13,12 @@ layout, CHANGELOG.md for history.
 - **Bump `VERSION` in sw.js** whenever files change, and list new files in its `FILES`, or installed copies keep old ones.
 - **Every change gets a CHANGELOG.md entry** (`## X.Y.Z - date`, Added / Changed / Fixed, written so the owner can
   follow it) and the version in package.json. 0.x until the owner calls it 1.0.
-- **Run `npm test`** (tests/browser-test.cjs, headless Chrome) before committing; add checks for new features.
+- **Run `npm test -- --min=100`** before committing: every suite in tests/ and 100% line coverage of js/. New code
+  gets checks in the right suite (or a new `suite-N-name.cjs`); code no test can reach is usually dead and goes. Helpers
+  are on the `t` object in tests/run.cjs (`add` shapes, `V` drawing-to-screen, `pointer` for pen and touch,
+  `bootWith` to start with broken storage, `stopServer` for offline). Paper.js gotchas the tests caught: segment
+  handles are live objects (clone before changing), open paths need `trace: false` in boolean ops, moving a layer
+  changes the active one, a CompoundPath fill hit has no point.
 - **Fonts:** only free-for-commercial-use fonts (OFL, Apache) go in the library; add them in `tools/fetch-fonts.mjs`
   and run `npm run fonts`, which rewrites `fonts/fonts.json` and `fonts/LICENSES.md`.
 - Repo: `JimmyJamStudio/JamDraw`, private until the owner decides to publish it (MIT, as-is). If it goes public, the

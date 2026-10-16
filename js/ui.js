@@ -124,7 +124,7 @@ function buildOptions() {
     dropper: () => [hint('Tap a shape to use its fill, stroke and stroke width')],
     hand: () => [hint('Drag to pan · wheel or pinch to zoom · fingers always pan once a pen has been used')],
   };
-  const list = (parts[S.tool] || (() => []))();
+  const list = parts[S.tool]();
   el.innerHTML = list.map((p) => p.html).join('');
   list.forEach((p) => p.bind());
 }
@@ -154,7 +154,7 @@ function buildStyle() {
   const live = (v) => {
     S[S.chip] = v;
     const key = S.chip === 'fill' ? 'fillColor' : 'strokeColor';
-    const walk = (it) => { if (it.children && !(it instanceof paper.CompoundPath)) it.children.forEach(walk); else if (S.chip === 'fill' || it.strokeWidth) it[key] = v ? new paper.Color(v) : null; };
+    const walk = (it) => { if (it.children && !(it instanceof paper.CompoundPath)) it.children.forEach(walk); else if (S.chip === 'fill' || it.strokeWidth) it[key] = new paper.Color(v); }; // the picker always has a color
     S.sel.forEach(walk);
     show();
   };
@@ -302,8 +302,10 @@ function layerAct(act) {
     dropHidden();
   } else if (act === 'layer-up') {
     if (l.nextSibling) l.insertAbove(l.nextSibling);
+    l.activate(); // moving a layer makes Paper.js activate another one
   } else if (act === 'layer-down') {
     if (l.previousSibling) l.insertBelow(l.previousSibling);
+    l.activate();
   } else if (act === 'layer-move-sel') {
     if (!S.sel.length) return toast('Select something first');
     S.sel.forEach((it) => l.addChild(it));
@@ -319,13 +321,13 @@ function buildSketch() {
     $('#sketch-toggle').textContent = sk && !sk.visible ? 'Show' : 'Hide';
     $('#sketch-move').classList.toggle('on', S.sketchMove);
     $('#sk-op').value = sk ? Math.round(sk.opacity * 100) : 40;
-    $('#sk-scale').value = sk && sk.w ? Math.round((sk.scale * sk.w / S.doc.w) * 100) : 100;
+    $('#sk-scale').value = sk ? Math.round((sk.scale * sk.w / S.doc.w) * 100) : 100;
     ['#sketch-toggle', '#sketch-move', '#sk-op', '#sk-scale'].forEach((s) => ($(s).disabled = !sk));
   };
-  $('#sk-op').oninput = (e) => { if (S.sketch) { S.sketch.opacity = e.target.value / 100; changed(); emit('changed-soft'); } };
+  // These controls are disabled until a sketch is loaded.
+  $('#sk-op').oninput = (e) => { S.sketch.opacity = e.target.value / 100; changed(); emit('changed-soft'); };
   $('#sk-scale').oninput = (e) => {
     const sk = S.sketch;
-    if (!sk || !sk.w) return;
     const cx = sk.x + (sk.w * sk.scale) / 2, cy = sk.y + (sk.h * sk.scale) / 2;
     sk.scale = (e.target.value / 100) * S.doc.w / sk.w;
     sk.x = cx - (sk.w * sk.scale) / 2;
@@ -345,8 +347,7 @@ function openMenu(anchor) {
   m.hidden = false;
   m.style.left = Math.min(r.left, innerWidth - m.offsetWidth - 8) + 'px';
   m.style.top = r.bottom + 6 + 'px';
-  const close = (e) => {
-    if (e && m.contains(e.target) && !e.target.closest('button')) return;
+  const close = () => {
     m.hidden = true;
     document.removeEventListener('pointerdown', outside, true);
   };
@@ -366,14 +367,15 @@ function dialog(html, onOk) {
 function docSettings() {
   const D = S.doc;
   dialog(`<h3 style="margin-top:0">Page</h3>
-    <label class="row">Name <input type="text" name="name" value="${(D.name || '').replace(/"/g, '&quot;')}"></label>
+    <label class="row">Name <input type="text" name="name" value="${D.name.replace(/"/g, '&quot;')}"></label>
     <label class="row">Width <input type="number" name="w" min="16" max="8192" value="${D.w}"> Height <input type="number" name="h" min="16" max="8192" value="${D.h}"></label>
     <div class="btns" id="presets">${[[512, 512], [1024, 1024], [2048, 2048], [1920, 1080], [1080, 1920], [1200, 630]].map(([w, h]) => `<button type="button" class="txt" data-w="${w}" data-h="${h}">${w}×${h}</button>`).join('')}</div>
     <label class="row"><input type="checkbox" name="transparent" ${D.transparent ? 'checked' : ''}> Transparent background</label>
     <menu><button value="cancel">Cancel</button><button value="ok" class="on">Save</button></menu>`, (f) => {
     D.name = f.name.value.trim() || 'Untitled';
-    D.w = clamp(Math.round(+f.w.value) || D.w, 16, 8192);
-    D.h = clamp(Math.round(+f.h.value) || D.h, 16, 8192);
+    // The form only lets through whole numbers from 16 to 8192 (or nothing, which keeps the old size).
+    D.w = +f.w.value || D.w;
+    D.h = +f.h.value || D.h;
     D.transparent = f.transparent.checked;
     fit();
     emit('changed');
@@ -414,7 +416,10 @@ function pickFile(accept, fn) {
   const f = $('#file');
   f.value = '';
   f.accept = accept;
-  f.onchange = () => { if (f.files[0]) fn(f.files[0]); };
+  f.onchange = async () => {
+    if (!f.files[0]) return;
+    try { await fn(f.files[0]); } catch { toast('That file could not be read'); }
+  };
   f.click();
 }
 
@@ -446,8 +451,8 @@ export function act(name, el) {
     case 'doc-settings': return docSettings();
     case 'layer-add': case 'layer-del': case 'layer-up': case 'layer-down': case 'layer-move-sel': return layerAct(name);
     case 'sketch-load': return pickFile('image/*', F.loadSketch);
-    case 'sketch-toggle': if (S.sketch) { S.sketch.visible = !S.sketch.visible; changed(); emit('sketch'); emit('changed-soft'); } return;
-    case 'sketch-move': S.sketchMove = !S.sketchMove && !!S.sketch; if (S.sketchMove) toast('Drag to move the sketch; tap Move again when done'); emit('sketch'); return;
+    case 'sketch-toggle': S.sketch.visible = !S.sketch.visible; changed(); emit('sketch'); emit('changed-soft'); return;
+    case 'sketch-move': S.sketchMove = !S.sketchMove; if (S.sketchMove) toast('Drag to move the sketch; tap Move again when done'); emit('sketch'); return;
     case 'sketch-clear': if (S.sketch && confirm('Remove the sketch?')) { S.sketch = null; S.sketchMove = false; changed(); emit('sketch'); emit('changed-soft'); } return;
   }
 }

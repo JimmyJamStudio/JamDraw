@@ -40,11 +40,7 @@ export function paste() {
   if (!clipboard) return;
   const layer = paper.project.activeLayer;
   const off = 12 / paper.view.zoom;
-  const items = clipboard.map((j) => {
-    const it = paper.project.importJSON(j);
-    if (it.parent !== layer) layer.addChild(it);
-    return it.translate(new paper.Point(off, off));
-  });
+  const items = clipboard.map((j) => layer.addChild(paper.project.importJSON(j)).translate(new paper.Point(off, off)));
   done(items);
 }
 export function selectAll() {
@@ -120,16 +116,10 @@ export function combine(op) {
   bakeAll(S.sel);
   const items = zOrder(S.sel).filter(isShape);
   if (items.length < 2) { toast('Select 2 or more shapes (ungroup groups first)'); return; }
-  let res;
+  let res = items[0];
   try {
-    if (op === 'subtract') {
-      res = items[0];
-      for (const it of items.slice(1)) res = res.subtract(it, { insert: false });
-    } else {
-      res = items[0];
-      for (const it of items.slice(1)) res = res[op](it, { insert: false });
-    }
-  } catch (e) {
+    for (const it of items.slice(1)) res = res[op](it, { insert: false }); // subtract: the top shapes cut the bottom one
+  } catch {
     toast('Those shapes could not be combined');
     return;
   }
@@ -197,7 +187,7 @@ export function stickerOutline() {
 // Colours and stroke for the selection.
 function eachShape(fn) {
   const walk = (it) => {
-    if (isShape(it) || it instanceof paper.PointText) fn(it);
+    if (isShape(it)) fn(it);
     else if (it.children) it.children.forEach(walk);
   };
   S.sel.forEach(walk);

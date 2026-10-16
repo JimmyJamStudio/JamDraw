@@ -5,20 +5,17 @@ import { commit } from './history.js';
 import { px, toView, redrawOverlay, strokeItemOutline, handleBox, handleDot, overlay, UI_COLOR } from './view.js';
 import { isText, bake, bakeAll } from './text.js';
 
-const P = () => paper;
-
 export function setSelection(items) {
   S.sel = items.filter(Boolean);
   emit('selection');
   redrawOverlay();
 }
 
-function hitItem(pt, opts = {}) {
-  const res = paper.project.hitTest(pt, {
+function hitItem(pt) {
+  return paper.project.hitTest(pt, {
     fill: true, stroke: true, segments: true, curves: true, tolerance: px(6),
-    match: (r) => isEditable(r.item), ...opts,
+    match: (r) => isEditable(r.item),
   });
-  return res;
 }
 
 function activeLayer() {
@@ -179,15 +176,13 @@ const select = {
 };
 
 // ---------------------------------------------------------------- Direct select (edit points and curve handles)
-function pathFromHit(res) {
+function pathFromHit(res, pt) {
   if (!res) return null;
   if (res.location && res.location.path) return res.location.path;
   if (res.segment) return res.segment.path;
-  let it = res.item;
-  if (it instanceof paper.CompoundPath) {
-    return it.children.find((c) => c.contains(res.point)) || it.children[0];
-  }
-  return it instanceof paper.Path ? it : null;
+  const it = res.item; // a fill hit: hit tests only return paths and compound paths here
+  if (it instanceof paper.CompoundPath) return it.children.find((c) => c.contains(pt)) || it.children[0];
+  return it;
 }
 
 function nodeHandleAt(vp) {
@@ -234,7 +229,7 @@ const node = {
       return;
     }
     const res = hitItem(ev.pt);
-    let path = pathFromHit(res);
+    let path = pathFromHit(res, ev.pt);
     if (path && path.parent && isText(path.parent)) {
       const host = path.parent, at = host.children.indexOf(path);
       bakeAll([host]);
@@ -275,7 +270,7 @@ const node = {
       const { seg, which } = this.h;
       const other = which === 'handleIn' ? 'handleOut' : 'handleIn';
       const v = ev.pt.subtract(seg.point);
-      const was = seg[which];
+      const was = seg[which].clone(); // a copy: Paper's handle objects are live and would already show the new value
       seg[which] = v;
       // Keep smooth points smooth unless Alt breaks them apart.
       if (!this.free && !seg[other].isZero() && Math.abs(was.normalize().dot(seg[other].normalize()) + 1) < 0.02) {
@@ -460,7 +455,6 @@ export function strokeOutline(pts, size, usePressure) {
     const last = raw[raw.length - 1];
     if (!last || Math.hypot(p.x - last.x, p.y - last.y) >= minD) raw.push({ ...p });
   }
-  if (!raw.length) return null;
   const rad = (p) => (size / 2) * (usePressure ? 0.12 + 0.88 * p : 1);
   if (raw.length < 3) {
     const p = raw[0];
@@ -557,7 +551,6 @@ const brush = {
     } else {
       const ink = S.fill || S.stroke || '#1d1418';
       let shape = strokeOutline(pts, b.size, this.pressure);
-      if (!shape) return;
       setStyle(shape, { fill: ink, stroke: null, width: 0 });
       if (b.merge) {
         const color = new paper.Color(ink);
@@ -615,17 +608,17 @@ const eraser = {
     const cut = strokeOutline(this.pts, S.eraser.size, this.pressure);
     this.pts = [];
     let changed = false;
-    if (cut) {
-      for (const it of erasable(this.layer)) {
-        if (!it.bounds.intersects(cut.bounds)) continue;
-        if (isText(it)) bake(it);
-        let r;
-        try { r = it.subtract(cut, { insert: false }); } catch { continue; }
-        const empty = !r || (r instanceof paper.CompoundPath ? !r.children.length : !r.segments.length) || Math.abs(r.area || 0) < 1e-3 && r.closed;
-        if (empty) it.remove();
-        else it.replaceWith(r);
-        changed = true;
-      }
+    for (const it of erasable(this.layer)) {
+      if (!it.bounds.intersects(cut.bounds)) continue;
+      if (isText(it)) bake(it);
+      // Lines need trace: false, or Paper.js returns nothing and the whole line would vanish.
+      const line = it instanceof paper.CompoundPath ? it.children.every((c) => !c.closed) : !it.closed;
+      let r;
+      try { r = it.subtract(cut, { insert: false, trace: !line }); } catch { continue; }
+      // Gone, or (for a shape) nothing left with any area. Lines have no area, so only emptiness counts.
+      if (r.isEmpty() || (!line && Math.abs(r.area) < 1e-3)) it.remove();
+      else it.replaceWith(r);
+      changed = true;
     }
     this.layer = null;
     S.sel = S.sel.filter((i) => i.parent);
@@ -708,6 +701,6 @@ const text = {
   drag() {}, up() {}, cancel() {},
 };
 
-const hand = { cursor: 'grab', down() {}, drag() {}, up() {}, cancel() {} };
+const hand = { cursor: 'grab', cancel() {} }; // main.js pans while the hand tool is on
 
 export const TOOLS = { select, node, pen, brush, eraser, shape, text, dropper, hand };

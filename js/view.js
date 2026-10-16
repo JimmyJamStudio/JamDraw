@@ -8,7 +8,7 @@ export const overlay = document.getElementById('overlay');
 const artboard = document.getElementById('artboard');
 const sketchImg = document.getElementById('sketch');
 const octx = overlay.getContext('2d');
-let drawOverlayFn = () => {};
+let drawOverlayFn; // set by initView
 
 export function initView(drawFn) {
   drawOverlayFn = drawFn;
@@ -20,7 +20,7 @@ export function initView(drawFn) {
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
   if (!w || !h) return;
-  const first = !paper.view.viewSize || paper.view.viewSize.width < 2;
+  const first = paper.view.viewSize.width < 2;
   paper.view.viewSize = new paper.Size(w, h);
   const dpr = window.devicePixelRatio || 1;
   overlay.width = Math.round(w * dpr);
@@ -28,7 +28,6 @@ function resize() {
   if (first) fit(); else changed();
 }
 
-export const zoom = () => paper.view.zoom;
 export const px = (n) => n / paper.view.zoom; // screen pixels -> drawing units
 
 export function toProject(clientX, clientY) {

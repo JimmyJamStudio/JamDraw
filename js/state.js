@@ -53,10 +53,8 @@ export function zOrder(items) {
   // Bottom first: compare by layer index, then by index path inside the layer.
   const key = (it) => {
     const path = [];
-    for (let n = it; n && !(n instanceof paper.Project); n = n.parent || n.project) {
-      path.unshift(n.index ?? 0);
-      if (n instanceof paper.Layer) break;
-    }
+    for (let n = it; !(n instanceof paper.Layer); n = n.parent) path.unshift(n.index);
+    path.unshift(it.layer.index);
     return path;
   };
   return items.slice().sort((a, b) => {
@@ -80,6 +78,9 @@ export function setStyle(item, { fill = S.fill, stroke = S.stroke, width = S.str
   item.strokeJoin = 'round';
   item.strokeCap = 'round';
 }
+// A file name from the drawing's name: letters, digits, spaces and dashes ("drawing" if nothing is left).
+export const fileName = () => S.doc.name.replace(/[^\w\- ]+/g, '').trim() || 'drawing';
+
 export function colorHex(c) {
   if (!c) return null;
   const a = c.alpha ?? 1;

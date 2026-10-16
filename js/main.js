@@ -55,6 +55,8 @@ function gestureInfo() {
 }
 
 overlay.addEventListener('pointerdown', (e) => {
+  // No mousedown follow-up: it would move focus to the page, out of a text box a tool just opened.
+  e.preventDefault();
   try { overlay.setPointerCapture(e.pointerId); } catch { /* some devices report pointers that can't be captured */ }
   document.body.classList.remove('sheet-style', 'sheet-layers');
   if (e.pointerType === 'pen') S.sawPen = true;
@@ -159,7 +161,8 @@ const KEY_TOOLS = { v: 'select', a: 'node', p: 'pen', b: 'brush', e: 'eraser', r
 
 window.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
-  if (tag === 'input' || tag === 'textarea' || tag === 'select' || document.querySelector('dialog[open]')) return;
+  // Not while typing, or under a pop-up dialog (the floating text panel doesn't block shortcuts).
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || document.getElementById('dlg').open) return;
   const k = e.key.toLowerCase();
   const ctrl = e.ctrlKey || e.metaKey;
   if (e.key === ' ') {
@@ -238,6 +241,6 @@ async function boot() {
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
-  window.__jamdraw = { S, paper, TOOLS, A }; // handy in the browser console
+  window.__jamdraw = { S, paper, TOOLS, A, setSel: setSelection }; // handy in the browser console, used by the tests
 }
 boot();

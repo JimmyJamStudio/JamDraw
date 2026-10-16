@@ -77,10 +77,10 @@ export async function addUserFont(file) {
 export async function textPathData(t) {
   const font = await getFont(t.font);
   const size = t.size;
-  const opts = { kerning: true, tracking: t.spacing || 0 };
+  const opts = { kerning: true, tracking: t.spacing };
   const scale = size / font.unitsPerEm;
   const asc = font.ascender * scale;
-  const lh = size * (t.lineHeight || 1.15);
+  const lh = size * t.lineHeight;
   const lines = String(t.text).split('\n');
   const widths = lines.map((l) => font.getAdvanceWidth(l, size, opts));
   const maxW = Math.max(0, ...widths);
@@ -107,7 +107,7 @@ export async function setTextData(item, t) {
   const { d, width } = await textPathData(t);
   const oldW = item.data.boxW;
   const anchorX = (w, a) => (a === 'center' ? w / 2 : a === 'right' ? w : 0);
-  const before = oldW != null ? item.localToGlobal(new paper.Point(anchorX(oldW, (item.data.text || t).align), 0)) : null;
+  const before = oldW != null ? item.localToGlobal(new paper.Point(anchorX(oldW, item.data.text.align), 0)) : null;
   item.data.text = { ...t };
   item.data.boxW = width;
   item.pathData = d || 'M0 0';
@@ -116,7 +116,6 @@ export async function setTextData(item, t) {
 
 // Plain shapes from here on (needed before cutting, combining or editing points).
 export function bake(item) {
-  if (!isText(item)) return item;
   item.applyMatrix = true;
   delete item.data.text;
   delete item.data.boxW;

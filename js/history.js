@@ -33,8 +33,7 @@ function restore(snap) {
   const p = paper.project;
   p.clear();
   p.importJSON(json);
-  if (!p.layers.length) new paper.Layer({ name: 'Layer 1' });
-  (p.layers[active] || p.layers[p.layers.length - 1]).activate();
+  p.layers[active].activate();
   S.sel = [];
   S.node.path = null;
   S.node.segs.clear();

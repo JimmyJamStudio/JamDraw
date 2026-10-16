@@ -56,12 +56,19 @@ The `?` button in the app shows these too.
 ## Test
 
 ```
-npm install           # once: puppeteer-core, to drive Chrome
-npm test              # every tool, text and fonts, undo, autosave, all five exports, the phone layout
+npm install                  # once: puppeteer-core, to drive Chrome
+npm test                     # 375+ checks in headless Chrome, then code coverage for every file in js/
+npm test -- --only=text      # just the suites whose name contains "text"
+npm test -- --min=100        # also fail if any file's coverage drops under 100%
 ```
 
-`CHROME_PATH` picks the browser if Chrome isn't in the usual place. The test prints where it left its screenshots and
-exported files.
+The suites (`tests/suite-*.cjs`, run by `tests/run.cjs`) drive the real app with the mouse, keyboard, a simulated pen
+with pressure and two-finger touch: every tool and option, text and fonts, combining and outlines, layers, swatches,
+menus and dialogs, saving and opening files, all five export formats, the phone layout, and working offline with the
+server switched off. They also break things on purpose (blocked storage, a failing database, fonts that won't load,
+an image too big for the browser, the PDF tools failing to load) to check the app says so and carries on.
+**Every line in `js/` is run by the tests (100% coverage);** when a few lines are missed the report shows exactly which
+code. `CHROME_PATH` picks the browser; screenshots, exported files and `coverage.json` go to a temp folder (printed).
 
 ## Project layout
 

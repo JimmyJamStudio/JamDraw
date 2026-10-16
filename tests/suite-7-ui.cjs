@@ -1,0 +1,380 @@
+// The interface: layers, swatches, the File menu, dialogs, the sketch, zoom and pan (wheel, keys, buttons, space,
+// middle button, pinch), palm rejection, undo / redo buttons, toasts.
+const path = require('path');
+const fs = require('fs');
+
+module.exports = (test) => {
+  test('ui: layers', async (t) => {
+    const { check, app, page, add } = t;
+    const names = () => app(() => __jamdraw.paper.project.layers.map((l) => l.name + (l === __jamdraw.paper.project.activeLayer ? '*' : '') + (l.visible ? '' : ' hidden') + (l.locked ? ' locked' : '')).join(' | '));
+    await t.act('layer-del');
+    check(await t.toastText() === 'A drawing needs at least one layer', 'the last layer can not be deleted');
+    await add({ x: 100, y: 100, w: 100, h: 100 });
+    await t.act('layer-add');
+    await t.act('layer-add');
+    check(await names() === 'Layer 1 | Layer 2 | Layer 3*', 'new layers go above the active one and become active');
+    await t.act('layer-down');
+    check(await names() === 'Layer 1 | Layer 3* | Layer 2', 'Down moves the layer down: ' + await names());
+    await t.act('layer-up');
+    await t.act('layer-up');
+    check(await names() === 'Layer 1 | Layer 2 | Layer 3*', 'Up moves it up, and stops at the top');
+    await app(() => __jamdraw.paper.project.layers[0].activate());
+    await t.act('layer-down');
+    check(await names() === 'Layer 1* | Layer 2 | Layer 3', 'and Down stops at the bottom');
+    // Click a row to activate; eye and lock buttons.
+    await page.click('#layers li[data-i="2"] .name');
+    check((await names()).endsWith('Layer 3*'), 'clicking a row makes it active');
+    await page.click('#layers li[data-i="0"] [data-l="vis"]');
+    check((await names()).startsWith('Layer 1 hidden'), 'the eye hides a layer');
+    await page.click('#layers li[data-i="0"] [data-l="vis"]');
+    await page.click('#layers li[data-i="0"] [data-l="lock"]');
+    check((await names()).startsWith('Layer 1 locked'), 'the lock locks it');
+    await page.click('#layers li[data-i="0"] [data-l="lock"]');
+    await page.evaluate(() => document.getElementById('layers').click());
+    // Rename by double-click (prompt answered, then cancelled, then left blank).
+    t.nextDialog = 'Background';
+    await page.$eval('#layers li[data-i="0"] .name', (el) => el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+    await t.wait(30);
+    check((await names()).startsWith('Background'), 'double-click renames a layer ' + await names());
+    t.nextDialog = false;
+    await page.$eval('#layers li[data-i="0"] .name', (el) => el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+    await t.wait(30);
+    t.nextDialog = '   ';
+    await page.$eval('#layers li[data-i="0"] .name', (el) => el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+    await t.wait(30);
+    check((await names()).startsWith('Background'), 'cancel or a blank name keeps the old name');
+    t.nextDialog = true;
+    await page.evaluate(() => document.getElementById('layers').dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+    // An unnamed layer shows as "Layer".
+    await app(() => { __jamdraw.paper.project.layers[1].name = ''; });
+    t.nextDialog = 'Ink';
+    await page.$eval('#layers li[data-i="1"] .name', (el) => el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true })));
+    await t.wait(30);
+    check(await app(() => __jamdraw.paper.project.layers[1].name) === 'Ink', 'an unnamed layer can be named');
+    t.nextDialog = true;
+    await app(() => { __jamdraw.paper.project.layers[1].name = ''; });
+    await t.act('layer-add');
+    check(await page.$$eval('#layers .name', (els) => els.some((e) => e.textContent === 'Layer')), 'an unnamed layer is listed as "Layer"');
+    // Move the selection to another layer.
+    await app(() => __jamdraw.paper.project.layers[1].activate());
+    await t.act('layer-move-sel');
+    check(await t.toastText() === 'Select something first', 'Move here needs a selection');
+    await app(() => __jamdraw.setSel([__jamdraw.paper.project.layers[0].firstChild]));
+    await t.act('layer-move-sel');
+    check(await app(() => __jamdraw.paper.project.layers[1].children.length) === 1, 'Move here moves the selection to the active layer');
+    await page.click('#layers li[data-i="1"] [data-l="lock"]');
+    check(await app(() => __jamdraw.S.sel.length) === 0, 'locking a layer drops its things from the selection');
+    await page.click('#layers li[data-i="1"] [data-l="lock"]');
+    await app(() => __jamdraw.setSel([__jamdraw.paper.project.layers[1].firstChild]));
+    // Hiding the layer drops its things from the selection.
+    await page.click('#layers li[data-i="1"] [data-l="vis"]');
+    check(await app(() => __jamdraw.S.sel.length) === 0, 'hiding a layer drops its things from the selection');
+    await page.click('#layers li[data-i="1"] [data-l="vis"]');
+    // Delete a layer with things on it: asks first.
+    t.nextDialog = false;
+    await t.act('layer-del');
+    check(await app(() => __jamdraw.paper.project.layers.length) === 4, 'deleting a layer with things on it asks first (and Cancel keeps it)');
+    t.nextDialog = true;
+    await t.act('layer-del');
+    check(await app(() => __jamdraw.paper.project.layers.length) === 3, 'OK deletes it');
+    await app(() => __jamdraw.paper.project.layers[0].activate());
+    await t.act('layer-del');
+    check(await app(() => __jamdraw.paper.project.layers.length === 2 && __jamdraw.paper.project.activeLayer.index === 0), 'an empty layer goes without asking; the one below (or the bottom) becomes active');
+  });
+
+  test('ui: swatches and colors', async (t) => {
+    const { check, app, page } = t;
+    const n0 = await page.$$eval('#swatches [data-sw]', (b) => b.length);
+    await app(() => { __jamdraw.S.fill = '#a1b2c3'; });
+    await page.click('#swatches [data-sw-add]');
+    check(await page.$$eval('#swatches [data-sw]', (b) => b.length) === n0 + 1, '+ saves the current color');
+    await page.click('#swatches [data-sw-add]');
+    check(await page.$$eval('#swatches [data-sw]', (b) => b.length) === n0 + 1, 'but not twice');
+    await t.act('color-none');
+    await page.click('#swatches [data-sw-add]');
+    check(await t.toastText() === 'Pick a color first', 'no color to save says so');
+    await page.click('#swatches [data-sw="3"]');
+    check(await app(() => __jamdraw.S.fill) === '#d22a5a', 'a swatch sets the color');
+    await page.click('[data-chip="stroke"]');
+    await page.click('#swatches [data-sw="0"]');
+    check(await app(() => __jamdraw.S.stroke) === '#1d1418', 'for the chip that is picked (stroke)');
+    await page.evaluate(() => document.getElementById('swatches').click());
+    t.nextDialog = false;
+    await page.click('#swatches [data-sw="1"]', { button: 'right' });
+    check(await page.$$eval('#swatches [data-sw]', (b) => b.length) === n0 + 1, 'right-click asks before removing (Cancel keeps it)');
+    t.nextDialog = true;
+    await page.click('#swatches [data-sw="1"]', { button: 'right' });
+    check(await page.$$eval('#swatches [data-sw]', (b) => b.length) === n0, 'OK removes it');
+    await page.evaluate(() => document.getElementById('swatches').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true })));
+    // Long press removes too, and the click that ends it does nothing else.
+    const sw = await page.$('#swatches [data-sw="1"]');
+    const bb = await sw.boundingBox();
+    await page.mouse.move(bb.x + 5, bb.y + 5);
+    await page.mouse.down();
+    await t.wait(700);
+    await page.mouse.up();
+    check(await page.$$eval('#swatches [data-sw]', (b) => b.length) === n0 - 1, 'a long press removes a swatch');
+    t.nextDialog = false;
+    await page.mouse.move(bb.x + 5, bb.y + 5);
+    await page.mouse.down();
+    await t.wait(700);
+    await page.mouse.up();
+    t.nextDialog = true;
+    check(await page.$$eval('#swatches [data-sw]', (b) => b.length) === n0 - 1 && await app(() => __jamdraw.S.fill) !== null, 'a long press you cancel keeps the swatch and does not pick it');
+    await page.mouse.move(bb.x + 5, bb.y + 5);
+    await page.mouse.down();
+    await t.wait(100);
+    await page.mouse.up();
+    await page.evaluate(() => document.getElementById('swatches').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+    check(await page.$$eval('#swatches [data-sw]', (b) => b.length) === n0 - 1, 'a short press does not');
+  });
+
+  test('ui: menu, dialogs, help', async (t) => {
+    const { check, app, page } = t;
+    await page.click('[data-act="menu"]');
+    await t.wait(50);
+    check(await app(() => !document.getElementById('menu').hidden), 'File opens the menu');
+    await page.evaluate(() => document.querySelector('#menu hr').click());
+    check(await app(() => !document.getElementById('menu').hidden), 'clicking a divider keeps it open');
+    await page.mouse.click(5, 400);
+    check(await app(() => document.getElementById('menu').hidden), 'clicking outside closes it ' + await app(() => [document.getElementById('menu').hidden, document.querySelector('dialog[open]') && document.querySelector('dialog[open]').id].join()));
+    await page.click('[data-act="menu"]');
+    await t.wait(50);
+    await page.click('#menu [data-act="doc-settings"]');
+    await t.wait(50);
+    check(await app(() => document.getElementById('menu').hidden && document.getElementById('dlg').open), 'a menu item closes the menu and does its thing');
+    await page.evaluate(() => document.getElementById('presets').click());
+    await page.click('#presets [data-w="1920"]');
+    await page.$eval('#dlg-body input[name="name"]', (el) => { el.value = '  My Logo  '; });
+    await page.click('#dlg-body input[name="transparent"]');
+    await page.click('#dlg-body button[value="ok"]');
+    await t.wait(60);
+    check(await app(() => { const d = __jamdraw.S.doc; return d.name === 'My Logo' && d.w === 1920 && d.h === 1080 && d.transparent; }), 'page size presets, name and transparency');
+    check(await app(() => document.getElementById('artboard').classList.contains('transparent')), 'the page shows a checkerboard when transparent');
+    check(await app(() => document.getElementById('docname').textContent) === 'My Logo · 1920×1080', 'the title shows the name and size');
+    await t.act('doc-settings');
+    await page.$eval('#dlg-body input[name="w"]', (el) => { el.value = '5'; });
+    await page.click('#dlg-body button[value="ok"]');
+    await t.wait(60);
+    check(await app(() => document.getElementById('dlg').open && __jamdraw.S.doc.w === 1920), 'a width under 16 is refused by the form (Save stays put)');
+    await page.$eval('#dlg-body input[name="name"]', (el) => { el.value = ''; });
+    await page.$eval('#dlg-body input[name="w"]', (el) => { el.value = ''; });
+    await page.$eval('#dlg-body input[name="h"]', (el) => { el.value = '700'; });
+    await page.click('#dlg-body button[value="ok"]');
+    await t.wait(60);
+    check(await app(() => { const d = __jamdraw.S.doc; return d.name === 'Untitled' && d.w === 1920 && d.h === 700; }), 'a blank name becomes Untitled and a blank size keeps the old one');
+    await t.act('doc-settings');
+    await page.$eval('#dlg-body input[name="h"]', (el) => { el.value = ''; });
+    await page.click('#dlg-body button[value="ok"]');
+    await t.wait(60);
+    check(await app(() => __jamdraw.S.doc.h) === 700, 'a blank height keeps the old one');
+    await t.act('doc-settings');
+    await page.click('#dlg-body button[value="cancel"]');
+    await t.wait(60);
+    check(await app(() => __jamdraw.S.doc.w) === 1920, 'Cancel changes nothing');
+    await t.act('help');
+    check(await page.$$eval('#dlg-body tr', (r) => r.length) > 8, 'the ? button lists the shortcuts');
+    await page.click('#dlg-body button[value="ok"]');
+    await t.wait(60);
+    await t.key('Escape');
+    // Keys are ignored while typing in a box or with a dialog open.
+    await page.focus('#hex');
+    await t.key('b');
+    check(await app(() => __jamdraw.S.tool) === 'select', 'typing in a box does not switch tools');
+    await page.evaluate(() => document.activeElement.blur());
+    await t.act('help');
+    await t.key('b');
+    check(await app(() => __jamdraw.S.tool) === 'select', 'nor with a dialog open');
+    await page.click('#dlg-body button[value="ok"]');
+    await t.wait(60);
+    await t.key('q');
+    check(await app(() => __jamdraw.S.tool) === 'select', 'keys that mean nothing do nothing');
+    await t.combo('Control', 'q');
+    await t.combo('Alt', 'b');
+    check(await app(() => __jamdraw.S.tool) === 'select', 'Alt+a tool key does not switch tools');
+    // Toasts fade.
+    await t.act('layer-del');
+    await t.wait(2400);
+    check(await app(() => !document.getElementById('toast').classList.contains('show')), 'toasts fade after a couple of seconds');
+  });
+
+  test('ui: zoom, pan, pinch, palm rejection', async (t) => {
+    const { check, app, page, key, combo, P } = t;
+    const z = () => app(() => +__jamdraw.paper.view.zoom.toFixed(4));
+    const c = () => app(() => [Math.round(__jamdraw.paper.view.center.x), Math.round(__jamdraw.paper.view.center.y)].join(','));
+    await t.act('fit');
+    const z0 = await z();
+    await t.act('zoom-in');
+    check(await z() > z0, 'the + button zooms in');
+    await t.act('zoom-out');
+    await t.act('zoom-out');
+    check(await z() < z0, 'the - button zooms out');
+    check(await app(() => document.getElementById('zoomlabel').textContent.endsWith('%')), 'the zoom level shows');
+    await t.act('fit');
+    check(await z() === z0, 'the zoom level button fits the page');
+    await key('1');
+    check(await z() === 1, '1 is 100%');
+    await key('0');
+    await key('=');
+    await key('-');
+    await key('-');
+    check(await z() < z0, '= and - zoom');
+    await combo('Control', '0');
+    await combo('Control', '=');
+    check(await z() > z0, 'Ctrl+= zooms in');
+    await combo('Control', '-');
+    await combo('Control', '-');
+    await key('0');
+    await page.mouse.move(...P(0.5, 0.5));
+    await page.mouse.wheel({ deltaY: -200 });
+    check(await z() > z0, 'the wheel zooms');
+    const c0 = await c();
+    await page.keyboard.down('Shift');
+    await page.mouse.wheel({ deltaY: 100 });
+    await page.keyboard.up('Shift');
+    check(await c() !== c0, 'Shift+wheel pans sideways');
+    await page.keyboard.down('Control');
+    await page.mouse.wheel({ deltaY: 30 });
+    await page.keyboard.up('Control');
+    for (let i = 0; i < 40; i++) await page.mouse.wheel({ deltaY: -2000 });
+    check(await z() === 64, 'zoom stops at 6400%');
+    await key('0');
+    // Pan: hand tool, space, middle button.
+    const c1 = await c();
+    await key('h');
+    await t.drag(P(0.5, 0.5), P(0.6, 0.6), 5);
+    check(await c() !== c1, 'the hand tool pans');
+    await key('v');
+    await key('0');
+    await page.keyboard.down(' ');
+    check(await app(() => document.getElementById('overlay').style.cursor) === 'grab', 'holding Space shows a hand');
+    await page.keyboard.down(' ');
+    await t.drag(P(0.5, 0.5), P(0.45, 0.4), 5);
+    await page.keyboard.up(' ');
+    check(await c() !== c1, 'Space + drag pans');
+    await key('0');
+    await page.mouse.move(...P(0.5, 0.5));
+    await page.mouse.down({ button: 'middle' });
+    await page.mouse.move(...P(0.6, 0.5), { steps: 4 });
+    await page.mouse.up({ button: 'middle' });
+    check(await c() !== c1, 'the middle mouse button pans');
+    await key('0');
+    // A right-click does nothing (and no menu).
+    const n = await t.count();
+    await page.mouse.click(...P(0.5, 0.5), { button: 'right' });
+    check(await t.count() === n, 'right-click does nothing');
+    // Pinch with two fingers, and a third finger is ignored.
+    const [cx, cy] = P(0.5, 0.5);
+    await app(([cx, cy]) => {
+      const el = document.getElementById('overlay');
+      const f = (type, id, x, y) => el.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', clientX: x, clientY: y, bubbles: true, isPrimary: id === 1 }));
+      f('pointerdown', 1, cx - 50, cy);
+      f('pointermove', 1, cx - 52, cy);
+      f('pointerdown', 2, cx + 50, cy);
+      f('pointerdown', 3, cx, cy + 80);
+      f('pointerup', 3, cx, cy + 80);
+      f('pointermove', 1, cx - 100, cy);
+      f('pointermove', 2, cx + 100, cy);
+      f('pointerup', 2, cx + 100, cy);
+      f('pointermove', 1, cx - 90, cy);
+      f('pointerup', 1, cx - 90, cy);
+    }, [cx, cy]);
+    check(await z() > z0 * 1.5, 'pinching out zooms in');
+    await app(([cx, cy]) => {
+      const el = document.getElementById('overlay');
+      const f = (type, id, x, y) => el.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', clientX: x, clientY: y, bubbles: true }));
+      f('pointerdown', 4, cx, cy); f('pointerdown', 5, cx, cy); f('pointermove', 5, cx + 30, cy); f('pointerup', 4, cx, cy); f('pointerup', 5, cx + 30, cy);
+    }, [cx, cy]);
+    check(Number.isFinite(await z()), 'two fingers landing on the same spot do not break zooming');
+    await key('0');
+    // A finger starting a stroke, then a second finger: the stroke is dropped and it becomes a pinch.
+    await key('b');
+    const n2 = await t.count();
+    await app(([cx, cy]) => {
+      const el = document.getElementById('overlay');
+      const f = (type, id, x, y) => el.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', clientX: x, clientY: y, bubbles: true }));
+      f('pointerdown', 1, cx, cy); f('pointermove', 1, cx + 20, cy); f('pointerdown', 2, cx + 100, cy + 100);
+      f('pointermove', 2, cx + 140, cy + 140); f('pointerup', 1, cx + 20, cy); f('pointerup', 2, cx + 140, cy + 140);
+    }, [cx, cy]);
+    check(await t.count() === n2, 'a second finger turns a stroke into a pinch');
+    // One finger draws until a pen is used; then fingers only pan.
+    await t.pointer('touch', [[cx, cy], [cx + 40, cy + 10], [cx + 80, cy + 20]]);
+    check(await t.count() === n2 + 1, 'before any pen, a finger draws');
+    await t.pointer('pen', [[cx, cy + 100, 0], [cx + 40, cy + 110, 0.5], [cx + 80, cy + 120, 0.6]]);
+    const c2 = await c();
+    const n3 = await t.count();
+    await t.pointer('touch', [[cx, cy], [cx + 40, cy + 10], [cx + 80, cy + 20]]);
+    check(await t.count() === n3 && await c() !== c2, 'after a pen, a finger pans instead of drawing (palm rejection)');
+    // The pen's barrel button pans.
+    await key('0');
+    const c3 = await c();
+    await t.pointer('pen', [[cx, cy], [cx + 50, cy + 30], [cx + 60, cy + 40]], { button: 5, buttons: 32 });
+    check(await c() !== c3, "the pen's eraser end pans");
+    // Hover rings for the brush and eraser, and leaving the canvas.
+    await key('e');
+    await page.mouse.move(cx, cy);
+    await page.mouse.move(5, 300);
+    // Browsers without coalesced pointer events still draw.
+    await key('b');
+    await app(() => { window.__gce = PointerEvent.prototype.getCoalescedEvents; delete PointerEvent.prototype.getCoalescedEvents; });
+    const n4 = await t.count();
+    await t.drag([cx, cy + 150], [cx + 100, cy + 170], 6);
+    await app(() => { PointerEvent.prototype.getCoalescedEvents = window.__gce; });
+    check(await t.count() === n4 + 1, 'drawing works without coalesced events (older browsers)');
+    // A canvas with no size (hidden window) skips layout work, then recovers.
+    await app(() => { document.getElementById('stage').style.display = 'none'; });
+    await t.wait(100);
+    await t.act('fit');
+    await app(() => { document.getElementById('stage').style.display = ''; });
+    await t.wait(100);
+    check(await app(() => __jamdraw.paper.view.viewSize.width) > 100, 'a hidden canvas comes back at its size');
+    // Undo / redo buttons.
+    await t.act('undo');
+    check(await t.count() === n4, 'the undo button');
+    await t.act('redo');
+    check(await t.count() === n4 + 1, 'the redo button');
+    await combo('Control', 'y');
+    await combo('Control', 'Shift', 'z');
+    for (let i = 0; i < 30; i++) await combo('Control', 'z');
+    check(await app(() => document.querySelector('[data-act="undo"]').disabled), 'undo greys out at the start of history');
+  });
+
+  test('ui: sketch to trace', async (t) => {
+    const { check, app, page } = t;
+    check(await app(() => document.getElementById('sk-op').disabled), 'sketch controls are off until a sketch is loaded');
+    t.nextDialog = true;
+    await t.act('sketch-clear');
+    const png = path.join(t.OUT, 'sketch.png');
+    // A small two-color PNG drawn by the page itself.
+    const b64 = await app(() => { const c = document.createElement('canvas'); c.width = 200; c.height = 100; const x = c.getContext('2d'); x.fillStyle = '#c00'; x.fillRect(0, 0, 100, 100); return c.toDataURL('image/png').split(',')[1]; });
+    fs.writeFileSync(png, Buffer.from(b64, 'base64'));
+    const [chooser] = await Promise.all([page.waitForFileChooser(), t.act('sketch-load')]);
+    await chooser.accept([png]);
+    await page.waitForFunction(() => __jamdraw.S.sketch && document.getElementById('sketch').style.display === 'block');
+    check(await app(() => { const s = __jamdraw.S.sketch; return Math.round(s.scale * s.w) === 1024 && s.opacity === 0.4; }), 'a loaded sketch fits the page at 40%');
+    await page.$eval('#sk-op', (el) => { el.value = '70'; el.dispatchEvent(new Event('input')); });
+    await page.$eval('#sk-scale', (el) => { el.value = '50'; el.dispatchEvent(new Event('input')); });
+    check(await app(() => { const s = __jamdraw.S.sketch; return s.opacity === 0.7 && Math.round(s.scale * s.w) === 512; }), 'opacity and size sliders');
+    await t.act('sketch-toggle');
+    check(await app(() => document.getElementById('sketch').style.display) === 'none', 'Hide hides it');
+    await t.act('sketch-toggle');
+    await t.act('sketch-move');
+    const x0 = await app(() => __jamdraw.S.sketch.x);
+    await t.drag(t.P(0.5, 0.5), t.P(0.55, 0.5), 4);
+    check(await app(() => __jamdraw.S.sketch.x) > x0, 'Move lets you drag the sketch');
+    await t.act('sketch-move');
+    await t.key('b');
+    check(await app(() => __jamdraw.S.sketchMove) === false, 'switching tools ends moving the sketch');
+    await t.wait(800);
+    await t.reload();
+    check(await app(() => !!__jamdraw.S.sketch && __jamdraw.S.sketch.opacity === 0.7), 'the sketch is saved with the drawing');
+    t.nextDialog = false;
+    await t.act('sketch-clear');
+    check(await app(() => !!__jamdraw.S.sketch), 'Remove asks first');
+    t.nextDialog = true;
+    await t.act('sketch-clear');
+    check(await app(() => __jamdraw.S.sketch === null && document.getElementById('sketch').style.display === 'none'), 'and removes it');
+    // An unchanged file input (no file picked) does nothing.
+    await page.evaluate(() => { const f = document.getElementById('file'); f.dispatchEvent(new Event('change')); });
+  });
+};

@@ -14,7 +14,6 @@ let busy = Promise.resolve();
 
 function schedule() {
   const s = session;
-  if (!s) return;
   busy = busy.then(() => setTextData(s.item, s.props)).catch((e) => toast(e.message)).then(redrawOverlay);
 }
 
@@ -29,7 +28,9 @@ async function open({ item, at, layer }) {
     item.translate(at.subtract(item.bounds.topLeft));
     isNew = true;
   }
-  session = { item, isNew, props: { ...item.data.text }, oldProps: { ...item.data.text }, oldMatrix: item.matrix.clone() };
+  // What Cancel puts back: the exact outlines and layout, so it works even if the old font is gone.
+  const old = { pathData: item.pathData, matrix: item.matrix.clone(), text: { ...item.data.text }, boxW: item.data.boxW };
+  session = { item, isNew, props: { ...item.data.text }, old };
   setSelection([item]);
   render();
   dlg.show();
@@ -46,7 +47,11 @@ async function finish(keep) {
   await busy;
   if (!keep) {
     if (s.isNew) { s.item.remove(); setSelection([]); }
-    else { await setTextData(s.item, s.oldProps); s.item.matrix = s.oldMatrix; }
+    else {
+      Object.assign(s.item.data, { text: s.old.text, boxW: s.old.boxW });
+      s.item.pathData = s.old.pathData;
+      s.item.matrix = s.old.matrix;
+    }
     redrawOverlay();
     return;
   }
@@ -83,7 +88,11 @@ function render() {
     <p class="tx-note">Every bundled font is free to use, commercial work and logos included (OFL or Apache). Fonts you load stay in this browser.</p>`;
   renderList();
   const ta = dlg.querySelector('textarea');
-  ta.oninput = () => { session.props.text = ta.value; schedule(); };
+  ta.oninput = () => {
+    session.props.text = ta.value;
+    dlg.querySelectorAll('.tx-prev').forEach((el) => { el.textContent = sample(); }); // previews follow your text
+    schedule();
+  };
   ta.onkeydown = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); finish(false); }
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); finish(true); }
@@ -128,13 +137,15 @@ function render() {
   };
 }
 
+// What the font list shows: the first line of your text, or the studio name while it's empty.
+const sample = () => session.props.text.split('\n')[0].trim().slice(0, 18) || 'Jimmy Jam';
+
 function renderList() {
   const box = dlg.querySelector('.tx-list');
   const q = query.trim().toLowerCase();
   const list = FONTS.filter((f) => (group === 'All' || f.group === group) && (!q || fontLabel(f).toLowerCase().includes(q)));
-  const sample = (session && session.props.text.split('\n')[0].trim().slice(0, 18)) || 'Jimmy Jam';
-  box.innerHTML = list.length ? list.map((f) => `<button type="button" data-font="${f.id}" class="${session && f.id === session.props.font ? 'on' : ''}">
-      <span class="tx-prev" data-prev="${f.id}">${esc(sample)}</span><small>${esc(fontLabel(f))}</small></button>`).join('')
+  box.innerHTML = list.length ? list.map((f) => `<button type="button" data-font="${f.id}" class="${f.id === session.props.font ? 'on' : ''}">
+      <span class="tx-prev" data-prev="${f.id}">${esc(sample())}</span><small>${esc(fontLabel(f))}</small></button>`).join('')
     : '<p class="tx-note">No fonts match.</p>';
   const io = new IntersectionObserver((entries) => {
     for (const en of entries) {
@@ -171,4 +182,3 @@ export function initTextUI() {
   on('edit-text', (x) => open(x));
   on('tool', () => { if (session) finish(true); });
 }
-export const textEditing = () => !!session;
