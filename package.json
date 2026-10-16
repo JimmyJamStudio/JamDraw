@@ -1,11 +1,16 @@
 {
   "name": "jamdraw",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "A friendly vector drawing app in the browser.",
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "start": "node serve.mjs"
+    "start": "node serve.mjs",
+    "test": "node tests/browser-test.cjs",
+    "fonts": "node tools/fetch-fonts.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.43.1"
   }
 }

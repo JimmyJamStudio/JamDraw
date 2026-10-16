@@ -13,6 +13,7 @@ export const S = {
   chip: 'fill',             // which colour the swatches and picker edit
   brush: { size: 18, pressure: true, mode: 'ink', merge: true, smooth: 2 },
   eraser: { size: 24 },
+  text: { font: 'lilita-one-400', size: 140, spacing: 0, lineHeight: 1.1, align: 'center' },
   shape: { kind: 'rect', radius: 0, sides: 6, points: 5, inner: 0.5 },
   doc: { name: 'Untitled', w: 1024, h: 1024, transparent: false },
   swatches: DEFAULT_SWATCHES.slice(),

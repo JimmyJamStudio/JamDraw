@@ -3,6 +3,7 @@
 import { S, emit, toast, isEditable, topItem, editableLayer, unionBounds, setStyle } from './state.js';
 import { commit } from './history.js';
 import { px, toView, redrawOverlay, strokeItemOutline, handleBox, handleDot, overlay, UI_COLOR } from './view.js';
+import { isText, bake, bakeAll } from './text.js';
 
 const P = () => paper;
 
@@ -87,6 +88,7 @@ const select = {
     }
     const res = hitItem(ev.pt);
     const item = res && topItem(res.item);
+    if (item && ev.detail >= 2 && isText(item)) { setSelection([item]); emit('edit-text', { item }); return; }
     if (item) {
       if (ev.shift) {
         setSelection(S.sel.includes(item) ? S.sel.filter((i) => i !== item) : [...S.sel, item]);
@@ -232,7 +234,13 @@ const node = {
       return;
     }
     const res = hitItem(ev.pt);
-    const path = pathFromHit(res);
+    let path = pathFromHit(res);
+    if (path && path.parent && isText(path.parent)) {
+      const host = path.parent, at = host.children.indexOf(path);
+      bakeAll([host]);
+      commit();
+      path = host.children[at] || host.children[0];
+    }
     if (path && ev.alt && path === S.node.path && res.location) {
       const seg = path.divideAt(path.getNearestLocation(ev.pt));
       S.node.segs.clear();
@@ -554,7 +562,7 @@ const brush = {
       if (b.merge) {
         const color = new paper.Color(ink);
         const others = this.layer.children.filter((c) => (c instanceof paper.Path || c instanceof paper.CompoundPath)
-          && c.closed !== false && !c.strokeColor && sameColor(c.fillColor, color) && c.visible && !c.locked && overlaps(shape, c));
+          && !isText(c) && c.closed !== false && !c.strokeColor && sameColor(c.fillColor, color) && c.visible && !c.locked && overlaps(shape, c));
         for (const o of others) {
           const u = shape.unite(o, { insert: false });
           shape = u;
@@ -610,6 +618,7 @@ const eraser = {
     if (cut) {
       for (const it of erasable(this.layer)) {
         if (!it.bounds.intersects(cut.bounds)) continue;
+        if (isText(it)) bake(it);
         let r;
         try { r = it.subtract(cut, { insert: false }); } catch { continue; }
         const empty = !r || (r instanceof paper.CompoundPath ? !r.children.length : !r.segments.length) || Math.abs(r.area || 0) < 1e-3 && r.closed;
@@ -686,6 +695,19 @@ const dropper = {
   drag() {}, up() {}, cancel() {},
 };
 
+// ---------------------------------------------------------------- Text (the editor lives in textui.js)
+const text = {
+  cursor: 'text',
+  down(ev) {
+    const res = hitItem(ev.pt);
+    const item = res && topItem(res.item);
+    if (item && isText(item)) { setSelection([item]); emit('edit-text', { item }); return; }
+    const layer = activeLayer();
+    if (layer) emit('edit-text', { at: ev.pt, layer });
+  },
+  drag() {}, up() {}, cancel() {},
+};
+
 const hand = { cursor: 'grab', down() {}, drag() {}, up() {}, cancel() {} };
 
-export const TOOLS = { select, node, pen, brush, eraser, shape, dropper, hand };
+export const TOOLS = { select, node, pen, brush, eraser, shape, text, dropper, hand };

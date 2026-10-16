@@ -6,6 +6,9 @@ import { TOOLS, setSelection, deleteNodes } from './tools.js';
 import * as A from './actions.js';
 import { restoreAutosave, scheduleAutosave, saveFile } from './store.js';
 import { buildUI, setTool, act } from './ui.js';
+import { loadFontList } from './text.js';
+import { initTextUI } from './textui.js';
+import { exportDialog } from './export.js';
 
 function drawOverlay(ctx) {
   const t = TOOLS[S.tool];
@@ -152,7 +155,7 @@ stage.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 // ---------------------------------------------------------------- keyboard
-const KEY_TOOLS = { v: 'select', a: 'node', p: 'pen', b: 'brush', e: 'eraser', r: 'shape', u: 'shape', i: 'dropper', h: 'hand' };
+const KEY_TOOLS = { v: 'select', a: 'node', p: 'pen', b: 'brush', e: 'eraser', r: 'shape', u: 'shape', t: 'text', i: 'dropper', h: 'hand' };
 
 window.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
@@ -179,6 +182,7 @@ window.addEventListener('keydown', (e) => {
     else if (k === 'g') A.groupSel();
     else if (k === 'a') { setTool('select'); A.selectAll(); }
     else if (k === 's') saveFile();
+    else if (k === 'e') exportDialog();
     else if (k === '[') A.arrange('back');
     else if (k === ']') A.arrange('front');
     else if (k === '=' || k === '+') zoomCenter(1.25);
@@ -214,6 +218,7 @@ window.addEventListener('keyup', (e) => {
 // ---------------------------------------------------------------- boot
 async function boot() {
   initView(drawOverlay);
+  await loadFontList();
   const restored = await restoreAutosave();
   if (!restored) {
     if (!paper.project.layers.length) new paper.Layer({ name: 'Layer 1' });
@@ -222,6 +227,7 @@ async function boot() {
     fit();
   }
   buildUI();
+  initTextUI();
   on('changed', scheduleAutosave);
   on('changed-soft', scheduleAutosave);
   on('selection', () => { if (S.tool === 'select') A.readSelStyle(); redrawOverlay(); });

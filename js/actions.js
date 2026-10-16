@@ -4,6 +4,7 @@ import { S, emit, toast, zOrder, unionBounds, colorHex } from './state.js';
 import { commit } from './history.js';
 import { setSelection } from './tools.js';
 import { redrawOverlay } from './view.js';
+import { bakeAll } from './text.js';
 
 const isShape = (it) => it instanceof paper.Path || it instanceof paper.CompoundPath;
 let clipboard = null;
@@ -116,6 +117,7 @@ export function align(how) {
 
 // Combine shapes (bottom-most keeps its colours).
 export function combine(op) {
+  bakeAll(S.sel);
   const items = zOrder(S.sel).filter(isShape);
   if (items.length < 2) { toast('Select 2 or more shapes (ungroup groups first)'); return; }
   let res;
@@ -139,6 +141,7 @@ export function combine(op) {
 // Turn strokes into filled shapes, so they can be combined and edited like anything else.
 export function outlineStroke() {
   if (!need()) return;
+  bakeAll(S.sel);
   const out = [];
   let any = false;
   for (const it of zOrder(S.sel)) {
@@ -166,6 +169,7 @@ export function stickerOutline() {
   const collect = (it) => {
     if (isShape(it)) {
       let s = it.clone({ insert: false });
+      if (s.data && s.data.text) { s.applyMatrix = true; delete s.data.text; }
       if (it.strokeColor && it.strokeWidth && !it.closed) {
         try { s = paperjsOffset.offsetStroke(it, it.strokeWidth / 2, { join: 'round', cap: 'round', insert: false }); } catch {}
       }

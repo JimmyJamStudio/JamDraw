@@ -1,0 +1,650 @@
+[
+ {
+  "id": "lilita-one-400",
+  "family": "Lilita One",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "lilita-one-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "titan-one-400",
+  "family": "Titan One",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "titan-one-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "fredoka-400",
+  "family": "Fredoka",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "fredoka-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "fredoka-700",
+  "family": "Fredoka",
+  "weight": 700,
+  "group": "Bubbly",
+  "file": "fredoka-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "baloo-2-800",
+  "family": "Baloo 2",
+  "weight": 800,
+  "group": "Bubbly",
+  "file": "baloo-2-800.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "luckiest-guy-400",
+  "family": "Luckiest Guy",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "luckiest-guy-400.woff",
+  "license": "Apache-2.0"
+ },
+ {
+  "id": "chewy-400",
+  "family": "Chewy",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "chewy-400.woff",
+  "license": "Apache-2.0"
+ },
+ {
+  "id": "sniglet-800",
+  "family": "Sniglet",
+  "weight": 800,
+  "group": "Bubbly",
+  "file": "sniglet-800.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "modak-400",
+  "family": "Modak",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "modak-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "bowlby-one-400",
+  "family": "Bowlby One",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "bowlby-one-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "carter-one-400",
+  "family": "Carter One",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "carter-one-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "paytone-one-400",
+  "family": "Paytone One",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "paytone-one-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "boogaloo-400",
+  "family": "Boogaloo",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "boogaloo-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "bangers-400",
+  "family": "Bangers",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "bangers-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "knewave-400",
+  "family": "Knewave",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "knewave-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "shrikhand-400",
+  "family": "Shrikhand",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "shrikhand-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "coiny-400",
+  "family": "Coiny",
+  "weight": 400,
+  "group": "Bubbly",
+  "file": "coiny-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "bungee-400",
+  "family": "Bungee",
+  "weight": 400,
+  "group": "Display",
+  "file": "bungee-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "righteous-400",
+  "family": "Righteous",
+  "weight": 400,
+  "group": "Display",
+  "file": "righteous-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "passion-one-400",
+  "family": "Passion One",
+  "weight": 400,
+  "group": "Display",
+  "file": "passion-one-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "passion-one-700",
+  "family": "Passion One",
+  "weight": 700,
+  "group": "Display",
+  "file": "passion-one-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "anton-400",
+  "family": "Anton",
+  "weight": 400,
+  "group": "Display",
+  "file": "anton-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "bebas-neue-400",
+  "family": "Bebas Neue",
+  "weight": 400,
+  "group": "Display",
+  "file": "bebas-neue-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "archivo-black-400",
+  "family": "Archivo Black",
+  "weight": 400,
+  "group": "Display",
+  "file": "archivo-black-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "black-ops-one-400",
+  "family": "Black Ops One",
+  "weight": 400,
+  "group": "Display",
+  "file": "black-ops-one-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "fugaz-one-400",
+  "family": "Fugaz One",
+  "weight": 400,
+  "group": "Display",
+  "file": "fugaz-one-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "russo-one-400",
+  "family": "Russo One",
+  "weight": 400,
+  "group": "Display",
+  "file": "russo-one-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "orbitron-700",
+  "family": "Orbitron",
+  "weight": 700,
+  "group": "Display",
+  "file": "orbitron-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "audiowide-400",
+  "family": "Audiowide",
+  "weight": 400,
+  "group": "Display",
+  "file": "audiowide-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "monoton-400",
+  "family": "Monoton",
+  "weight": 400,
+  "group": "Display",
+  "file": "monoton-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "press-start-2p-400",
+  "family": "Press Start 2P",
+  "weight": 400,
+  "group": "Display",
+  "file": "press-start-2p-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "silkscreen-400",
+  "family": "Silkscreen",
+  "weight": 400,
+  "group": "Display",
+  "file": "silkscreen-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "permanent-marker-400",
+  "family": "Permanent Marker",
+  "weight": 400,
+  "group": "Handwritten",
+  "file": "permanent-marker-400.woff",
+  "license": "Apache-2.0"
+ },
+ {
+  "id": "caveat-400",
+  "family": "Caveat",
+  "weight": 400,
+  "group": "Handwritten",
+  "file": "caveat-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "caveat-700",
+  "family": "Caveat",
+  "weight": 700,
+  "group": "Handwritten",
+  "file": "caveat-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "pacifico-400",
+  "family": "Pacifico",
+  "weight": 400,
+  "group": "Handwritten",
+  "file": "pacifico-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "dancing-script-700",
+  "family": "Dancing Script",
+  "weight": 700,
+  "group": "Handwritten",
+  "file": "dancing-script-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "kalam-400",
+  "family": "Kalam",
+  "weight": 400,
+  "group": "Handwritten",
+  "file": "kalam-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "patrick-hand-400",
+  "family": "Patrick Hand",
+  "weight": 400,
+  "group": "Handwritten",
+  "file": "patrick-hand-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "gochi-hand-400",
+  "family": "Gochi Hand",
+  "weight": 400,
+  "group": "Handwritten",
+  "file": "gochi-hand-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "indie-flower-400",
+  "family": "Indie Flower",
+  "weight": 400,
+  "group": "Handwritten",
+  "file": "indie-flower-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "creepster-400",
+  "family": "Creepster",
+  "weight": 400,
+  "group": "Spooky",
+  "file": "creepster-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "nosifer-400",
+  "family": "Nosifer",
+  "weight": 400,
+  "group": "Spooky",
+  "file": "nosifer-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "butcherman-400",
+  "family": "Butcherman",
+  "weight": 400,
+  "group": "Spooky",
+  "file": "butcherman-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "eater-400",
+  "family": "Eater",
+  "weight": 400,
+  "group": "Spooky",
+  "file": "eater-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "cinzel-400",
+  "family": "Cinzel",
+  "weight": 400,
+  "group": "Fantasy",
+  "file": "cinzel-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "cinzel-700",
+  "family": "Cinzel",
+  "weight": 700,
+  "group": "Fantasy",
+  "file": "cinzel-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "cinzel-decorative-700",
+  "family": "Cinzel Decorative",
+  "weight": 700,
+  "group": "Fantasy",
+  "file": "cinzel-decorative-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "uncial-antiqua-400",
+  "family": "Uncial Antiqua",
+  "weight": 400,
+  "group": "Fantasy",
+  "file": "uncial-antiqua-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "medievalsharp-400",
+  "family": "MedievalSharp",
+  "weight": 400,
+  "group": "Fantasy",
+  "file": "medievalsharp-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "almendra-400",
+  "family": "Almendra",
+  "weight": 400,
+  "group": "Fantasy",
+  "file": "almendra-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "metamorphous-400",
+  "family": "Metamorphous",
+  "weight": 400,
+  "group": "Fantasy",
+  "file": "metamorphous-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "pirata-one-400",
+  "family": "Pirata One",
+  "weight": 400,
+  "group": "Fantasy",
+  "file": "pirata-one-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "im-fell-english-400",
+  "family": "IM Fell English",
+  "weight": 400,
+  "group": "Fantasy",
+  "file": "im-fell-english-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "grenze-gotisch-700",
+  "family": "Grenze Gotisch",
+  "weight": 700,
+  "group": "Fantasy",
+  "file": "grenze-gotisch-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "unifrakturmaguntia-400",
+  "family": "UnifrakturMaguntia",
+  "weight": 400,
+  "group": "Fantasy",
+  "file": "unifrakturmaguntia-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "new-rocker-400",
+  "family": "New Rocker",
+  "weight": 400,
+  "group": "Fantasy",
+  "file": "new-rocker-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "macondo-400",
+  "family": "Macondo",
+  "weight": 400,
+  "group": "Fantasy",
+  "file": "macondo-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "inter-400",
+  "family": "Inter",
+  "weight": 400,
+  "group": "Sans",
+  "file": "inter-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "inter-800",
+  "family": "Inter",
+  "weight": 800,
+  "group": "Sans",
+  "file": "inter-800.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "montserrat-400",
+  "family": "Montserrat",
+  "weight": 400,
+  "group": "Sans",
+  "file": "montserrat-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "montserrat-800",
+  "family": "Montserrat",
+  "weight": 800,
+  "group": "Sans",
+  "file": "montserrat-800.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "poppins-400",
+  "family": "Poppins",
+  "weight": 400,
+  "group": "Sans",
+  "file": "poppins-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "poppins-700",
+  "family": "Poppins",
+  "weight": 700,
+  "group": "Sans",
+  "file": "poppins-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "nunito-400",
+  "family": "Nunito",
+  "weight": 400,
+  "group": "Sans",
+  "file": "nunito-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "nunito-800",
+  "family": "Nunito",
+  "weight": 800,
+  "group": "Sans",
+  "file": "nunito-800.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "oswald-400",
+  "family": "Oswald",
+  "weight": 400,
+  "group": "Sans",
+  "file": "oswald-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "oswald-700",
+  "family": "Oswald",
+  "weight": 700,
+  "group": "Sans",
+  "file": "oswald-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "roboto-400",
+  "family": "Roboto",
+  "weight": 400,
+  "group": "Sans",
+  "file": "roboto-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "roboto-700",
+  "family": "Roboto",
+  "weight": 700,
+  "group": "Sans",
+  "file": "roboto-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "lato-400",
+  "family": "Lato",
+  "weight": 400,
+  "group": "Sans",
+  "file": "lato-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "lato-900",
+  "family": "Lato",
+  "weight": 900,
+  "group": "Sans",
+  "file": "lato-900.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "playfair-display-400",
+  "family": "Playfair Display",
+  "weight": 400,
+  "group": "Serif",
+  "file": "playfair-display-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "playfair-display-800",
+  "family": "Playfair Display",
+  "weight": 800,
+  "group": "Serif",
+  "file": "playfair-display-800.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "lora-400",
+  "family": "Lora",
+  "weight": 400,
+  "group": "Serif",
+  "file": "lora-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "lora-700",
+  "family": "Lora",
+  "weight": 700,
+  "group": "Serif",
+  "file": "lora-700.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "merriweather-400",
+  "family": "Merriweather",
+  "weight": 400,
+  "group": "Serif",
+  "file": "merriweather-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "merriweather-900",
+  "family": "Merriweather",
+  "weight": 900,
+  "group": "Serif",
+  "file": "merriweather-900.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "dm-serif-display-400",
+  "family": "DM Serif Display",
+  "weight": 400,
+  "group": "Serif",
+  "file": "dm-serif-display-400.woff",
+  "license": "OFL-1.1"
+ },
+ {
+  "id": "roboto-slab-400",
+  "family": "Roboto Slab",
+  "weight": 400,
+  "group": "Serif",
+  "file": "roboto-slab-400.woff",
+  "license": "Apache-2.0"
+ },
+ {
+  "id": "roboto-slab-800",
+  "family": "Roboto Slab",
+  "weight": 800,
+  "group": "Serif",
+  "file": "roboto-slab-800.woff",
+  "license": "Apache-2.0"
+ }
+]

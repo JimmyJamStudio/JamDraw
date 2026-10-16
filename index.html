@@ -96,20 +96,21 @@
   <button data-act="place">Place SVG into this drawing</button>
   <button data-act="save">Save .jamdraw file</button>
   <hr>
-  <button data-act="export-svg">Export SVG</button>
-  <button data-act="export-png" data-size="512">Export PNG 512</button>
-  <button data-act="export-png" data-size="1024">Export PNG 1024</button>
-  <button data-act="export-png" data-size="2048">Export PNG 2048</button>
+  <button data-act="export">Export… (SVG, PNG, JPG, WebP, PDF)</button>
+  <button data-act="export-svg">Quick export: SVG of the page</button>
+  <button data-act="export-png" data-size="1024">Quick export: PNG 1024</button>
   <hr>
   <button data-act="doc-settings">Page size and background</button>
 </div>
 
 <dialog id="dlg"><form method="dialog" id="dlg-body"></form></dialog>
+<dialog id="textdlg" class="floating"></dialog>
 <input type="file" id="file" hidden>
 <div id="toast" role="status"></div>
 
 <script src="vendor/paper-core.min.js"></script>
 <script src="vendor/paperjs-offset.min.js"></script>
+<script src="vendor/opentype.min.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

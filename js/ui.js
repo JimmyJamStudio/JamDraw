@@ -6,6 +6,8 @@ import { TOOLS, setSelection, deleteNodes, smoothNodes } from './tools.js';
 import * as A from './actions.js';
 import * as F from './store.js';
 import { fit, zoomCenter, changed, redrawOverlay, overlay } from './view.js';
+import { exportDialog, quickExport } from './export.js';
+import { isText, bakeAll } from './text.js';
 
 const $ = (s) => document.querySelector(s);
 const ICON = {
@@ -15,6 +17,7 @@ const ICON = {
   brush: '<path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/>',
   eraser: '<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
   shape: '<rect x="3" y="3" width="10" height="10" rx="1"/><circle cx="16" cy="16" r="5"/>',
+  text: '<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
   dropper: '<path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4z"/>',
   hand: '<path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/>',
   eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
@@ -28,6 +31,7 @@ const TOOL_LIST = [
   ['brush', 'Brush, with pen pressure (B)'],
   ['eraser', 'Eraser (E)'],
   ['shape', 'Shapes (R)'],
+  ['text', 'Text, with a font library (T)'],
   ['dropper', 'Pick up colors (I)'],
   ['hand', 'Pan (H, or hold Space)'],
 ];
@@ -47,7 +51,7 @@ export function setTool(t) {
 
 function buildToolbar() {
   const bar = $('#toolbar');
-  bar.innerHTML = TOOL_LIST.map(([t, title], i) => (i === 7 ? '<div class="sep"></div>' : '')
+  bar.innerHTML = TOOL_LIST.map(([t, title], i) => (i === 8 ? '<div class="sep"></div>' : '')
     + `<button data-tool="${t}" title="${title}" aria-label="${title}">${svg(t)}</button>`).join('');
   bar.addEventListener('click', (e) => {
     const b = e.target.closest('[data-tool]');
@@ -89,6 +93,8 @@ function buildOptions() {
   const parts = {
     select: () => [btn('Duplicate', A.duplicateSel, 'Ctrl+D'), btn('Delete', A.deleteSel, 'Del'), btn('Group', A.groupSel, 'Ctrl+G'),
       btn('Ungroup', A.ungroupSel, 'Ctrl+Shift+G'), btn('Flip ↔', () => A.flip('h')), btn('Flip ↕', () => A.flip('v')),
+      btn('Edit text', () => { const t = S.sel.find(isText); if (t) emit('edit-text', { item: t }); else toast('Select a text first'); }, 'Or double-click the text'),
+      btn('Text to shapes', () => { if (bakeAll(S.sel)) commit(); else toast('Select a text first'); }, 'Turn text into plain shapes you can edit point by point'),
       hint('Shift: keep proportions or snap 15° · Alt-drag: copy · drag just outside a corner: rotate')],
     node: () => [btn('Smooth', () => smoothNodes(true)), btn('Corner', () => smoothNodes(false)),
       btn('Delete point', () => S.node.segs.size && deleteNodes()),
@@ -114,6 +120,7 @@ function buildOptions() {
       out.push(hint('Shift: square · Alt: from the center'));
       return out;
     },
+    text: () => [hint('Tap the page to add text, or tap a text to change it · it uses the Fill color · Select › Text to shapes for point editing')],
     dropper: () => [hint('Tap a shape to use its fill, stroke and stroke width')],
     hand: () => [hint('Drag to pan · wheel or pinch to zoom · fingers always pan once a pen has been used')],
   };
@@ -383,7 +390,9 @@ function docSettings() {
 
 function help() {
   const rows = [
-    ['V A P B E R I H', 'Select · Points · Pen · Brush · Eraser · Shapes · Pick color · Pan'],
+    ['V A P B E R T I H', 'Select · Points · Pen · Brush · Eraser · Shapes · Text · Pick color · Pan'],
+    ['Double-click text', 'Edit it (Ctrl+Enter: done, Esc: cancel)'],
+    ['Ctrl+E', 'Export…'],
     ['Space + drag', 'Pan (also middle mouse button, or two fingers)'],
     ['Wheel / pinch', 'Zoom · 0 fits the page · 1 is 100%'],
     ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / redo'],
@@ -431,8 +440,9 @@ export function act(name, el) {
     case 'open': return pickFile('.jamdraw,.json,.svg,image/svg+xml', F.openFile);
     case 'place': return pickFile('.svg,image/svg+xml', async (f) => setSelection([await F.placeSVG(f)]));
     case 'save': return F.saveFile();
-    case 'export-svg': return F.exportSVG();
-    case 'export-png': return F.exportPNG(+el.dataset.size);
+    case 'export': return exportDialog();
+    case 'export-svg': return quickExport('svg');
+    case 'export-png': return quickExport('png', +el.dataset.size);
     case 'doc-settings': return docSettings();
     case 'layer-add': case 'layer-del': case 'layer-up': case 'layer-down': case 'layer-move-sel': return layerAct(name);
     case 'sketch-load': return pickFile('image/*', F.loadSketch);

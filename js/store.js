@@ -14,7 +14,7 @@ function db() {
   });
   return dbp;
 }
-async function put(key, val) {
+export async function kvPut(key, val) {
   const d = await db();
   return new Promise((res, rej) => {
     const t = d.transaction(STORE, 'readwrite');
@@ -23,7 +23,7 @@ async function put(key, val) {
     t.onerror = () => rej(t.error);
   });
 }
-async function get(key) {
+export async function kvGet(key) {
   const d = await db();
   return new Promise((res, rej) => {
     const r = d.transaction(STORE).objectStore(STORE).get(key);
@@ -64,11 +64,11 @@ function load(data) {
 let saveTimer = 0;
 export function scheduleAutosave() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => put(KEY, serialize()).catch((e) => console.warn('autosave failed', e)), 600);
+  saveTimer = setTimeout(() => kvPut(KEY, serialize()).catch((e) => console.warn('autosave failed', e)), 600);
 }
 export async function restoreAutosave() {
   try {
-    const data = await get(KEY);
+    const data = await kvGet(KEY);
     if (data && data.app === 'JamDraw') { load(data); return true; }
   } catch (e) { console.warn('restore failed', e); }
   return false;
@@ -79,45 +79,14 @@ export function newDoc() {
   scheduleAutosave();
 }
 
-function download(name, blob) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-}
 const safeName = () => (S.doc.name || 'drawing').replace(/[^\w\- ]+/g, '').trim() || 'drawing';
 
 export function saveFile() {
-  download(safeName() + '.jamdraw', new Blob([JSON.stringify(serialize())], { type: 'application/json' }));
-}
-
-// SVG of the page area only (Paper writes hidden layers as visibility="hidden").
-export function svgString() {
-  let svg = paper.project.exportSVG({ asString: true, bounds: new paper.Rectangle(0, 0, S.doc.w, S.doc.h), precision: 3 });
-  if (!S.doc.transparent) svg = svg.replace(/(<svg[^>]*>)/, `$1<rect width="${S.doc.w}" height="${S.doc.h}" fill="#ffffff"/>`);
-  return svg;
-}
-export function exportSVG() {
-  download(safeName() + '.svg', new Blob([svgString()], { type: 'image/svg+xml' }));
-}
-export function exportPNG(size) {
-  const svg = svgString();
-  const img = new Image();
-  const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
-  img.onload = () => {
-    const k = size / Math.max(S.doc.w, S.doc.h);
-    const c = document.createElement('canvas');
-    c.width = Math.round(S.doc.w * k);
-    c.height = Math.round(S.doc.h * k);
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    URL.revokeObjectURL(url);
-    c.toBlob((b) => download(`${safeName()}-${size}.png`, b), 'image/png');
-  };
-  img.onerror = () => toast('PNG export failed');
-  img.src = url;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(serialize())], { type: 'application/json' }));
+  a.download = safeName() + '.jamdraw';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
 function readFile(file, as = 'text') {
