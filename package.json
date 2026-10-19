@@ -1,6 +1,6 @@
 {
   "name": "jamdraw",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "A friendly vector drawing app in the browser.",
   "license": "MIT",

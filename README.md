@@ -25,6 +25,8 @@ Jimmy Jam Studio to draw our own logo and art; offered as-is, free to use (MIT).
   browser and works offline once installed
 - Plain HTML, CSS and JavaScript modules: no build step, no framework, no server
 
+**Use it now:** https://jimmyjamstudio.com/draw/ (installs like an app; works offline).
+
 ## Run it
 
 ```
@@ -104,4 +106,4 @@ See CHANGELOG.md for what changed.
 
 License texts for the libraries are in `vendor/`, for the fonts in `fonts/licenses/`.
 
-© 2026 Jimmy FNC. MIT licensed (LICENSE).
+© 2026 James Caldwell. MIT licensed (LICENSE).

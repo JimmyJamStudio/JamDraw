@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.1 - 2026-10-19
+
+JamDraw is public, and online at https://jimmyjamstudio.com/draw/.
+
+### Changed
+- The repository is public under JimmyJamStudio. The license's copyright holder is James Caldwell (was "Jimmy FNC",
+  a handle rather than a legal name; it moves to Jimmy FNC LLC once the company exists).
+- README links the hosted copy.
+
 ## 0.4.0 - 2026-10-16
 
 Exact sizes and snapping, for lining things up (a pair of eyes that match).

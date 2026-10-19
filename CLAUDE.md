@@ -1,6 +1,6 @@
 # JamDraw: notes for Claude
 
-A vector drawing PWA by Jimmy Jam Studio (the owner, Jimmy FNC), built to draw the studio logo with a PC drawing tablet
+A vector drawing PWA by Jimmy Jam Studio (the owner, James Caldwell, "Jimmy FNC"), built to draw the studio logo with a PC drawing tablet
 and a Galaxy S25 Ultra's S Pen. Plain HTML/CSS/JS modules, no build step, no framework. See README.md for features and
 layout, CHANGELOG.md for history.
 
@@ -21,8 +21,9 @@ layout, CHANGELOG.md for history.
   changes the active one, a CompoundPath fill hit has no point.
 - **Fonts:** only free-for-commercial-use fonts (OFL, Apache) go in the library; add them in `tools/fetch-fonts.mjs`
   and run `npm run fonts`, which rewrites `fonts/fonts.json` and `fonts/LICENSES.md`.
-- Repo: `JimmyJamStudio/JamDraw`, private until the owner decides to publish it (MIT, as-is). If it goes public, the
-  plan is jimmyjamstudio.com/draw.
+- Repo: `JimmyJamStudio/JamDraw`, **public** since 2026-10-19 (MIT, as-is; copyright James Caldwell until Jimmy FNC LLC
+  is formed and the IP is assigned to it). Hosted at https://jimmyjamstudio.com/draw/ by the studio site
+  (`JimmyJamStudio/website`, whose `tools/build.py` copies this repo's runtime files into `dist/draw/`).
 
 ## How it works
 
