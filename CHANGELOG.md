@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0 - 2026-10-25
+
+Tilting shapes in 3D, for things seen at an angle (the mascot's headphones).
+
+### Added
+- **Tilt ↔ and Tilt ↕** (Position and size, under Angle, 0 to 85 degrees): turn the selection away from you as if it
+  were a flat card in 3D. Tilt ↔ turns it round its up-down line (a circle becomes a narrower ellipse, like a
+  headphone seen from the side); Tilt ↕ round its left-right line (like a plate seen from above). Use Angle to point
+  it any way. Everything selected tilts together, so the strawberry on an earcup tilts with it. Each shape remembers
+  its tilt: typing a new one replaces the old (back to 0 undoes it), and several shapes at different tilts show 0
+  and all go to a new one. Outlines keep their thickness.
+
 ## 0.7.0 - 2026-10-25
 
 How the brush feels: steadier lines, a magnet for tracing, and pressure the way you like it.

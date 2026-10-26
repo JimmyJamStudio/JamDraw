@@ -17,7 +17,9 @@ Jimmy Jam Studio to draw our own logo and art; offered as-is, free to use (MIT).
   Fantasy, Sans and Serif, every one free for commercial use (OFL or Apache, `fonts/LICENSES.md`); load your own
   TTF, OTF or WOFF too. Text is real vector outlines from the start, stays editable (font, size, spacing, lines,
   alignment) and turns into plain shapes for point editing
-- **Exact and lined up:** X, Y, width, height and angle boxes for the selection (with a lock for proportions);
+- **Exact and lined up:** X, Y, width, height and angle boxes for the selection (with a lock for proportions), and
+  a 3D tilt (a circle turned away becomes the ellipse of a headphone seen from the side; everything selected tilts
+  together, so a logo on it tilts too);
   snapping to the page's edges and center and to other shapes' edges and centers, with pink guides, plus an optional
   grid; hold Ctrl while dragging to place freely
 - **Edit:** move, scale, rotate, flip, group, arrange, point and curve-handle editing, combine shapes (unite,

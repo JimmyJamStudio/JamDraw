@@ -4,6 +4,37 @@ module.exports = (test) => {
   const bounds = (t, i = 0) => t.app((i) => { const b = __jamdraw.paper.project.activeLayer.children.at(i).bounds; return [b.x, b.y, b.width, b.height].map((v) => Math.round(v * 10) / 10); }, i);
   const shown = (t) => t.app(() => ['x', 'y', 'w', 'h', 'a'].map((f) => document.getElementById('tf-' + f).value).join(','));
 
+  test('transform: 3D tilt', async (t) => {
+    const { check, app, add, key } = t;
+    const size = async (i = 0) => (await bounds(t, i)).slice(2).map(Math.round).join('x');
+    const tilt = () => app(() => ['tx', 'ty'].map((f) => document.getElementById('tf-' + f).value).join(','));
+    await add({ kind: 'circle', x: 300, y: 300, r: 100 }, { kind: 'circle', x: 700, y: 300, r: 100 });
+    await key('v');
+    await t.sel(0);
+    check(await tilt() === '0,0', 'a fresh shape has no tilt');
+    await field(t, 'tx', 60);
+    check(await size() === '100x200' && await tilt() === '60,0', 'Tilt ↔ 60: a circle turned away, half as wide');
+    await field(t, 'tx', 30);
+    check(await size() === '173x200', 'a new tilt replaces the old one rather than adding to it');
+    await field(t, 'tx', 0);
+    await field(t, 'ty', 60);
+    check(await size() === '200x100', 'Tilt ↕ squashes it top to bottom instead');
+    await field(t, 'ty', 0);
+    await field(t, 'tx', 99);
+    check(await tilt() === '85,0' && await size() === '17x200', 'tilts stop at 85°');
+    // Turned 90°, its own left-right axis runs up and down the page.
+    await t.sel(1);
+    await field(t, 'a', 90);
+    await field(t, 'tx', 60);
+    check(await size(1) === '200x100', 'the tilt follows the shape\'s angle');
+    await t.sel(0, 1);
+    check(await tilt() === '0,0', 'different tilts show 0');
+    await field(t, 'tx', 45);
+    check(await app(() => __jamdraw.paper.project.activeLayer.children.map((c) => c.data.tiltX).join()) === '45,45', 'and a new tilt tilts them all to it');
+    await t.combo('Control', 'z');
+    check(await app(() => __jamdraw.paper.project.activeLayer.children.map((c) => c.data.tiltX).join()) === '85,60', 'undo takes it back');
+  });
+
   test('transform: position and size boxes', async (t) => {
     const { check, app, add, page, key } = t;
     check(await app(() => document.getElementById('tf-x').disabled && document.getElementById('tf-x').value === ''), 'the boxes are empty and off with nothing selected');
