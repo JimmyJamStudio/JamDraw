@@ -1,6 +1,7 @@
 // How the brush feels: Steady, the magnet, pressure feel, thinnest line and taper, and the More… panel.
 
-// Draws a stroke straight onto the canvas, through drawing points [x, y, pressure?]: { type, ctrl, noUp }.
+// Draws a stroke straight onto the canvas, through drawing points [x, y, pressure?]: { type, ctrl, noUp, upOnly,
+// moveOnly (carry on a stroke begun with noUp) }.
 const stroke = (t, pts, o = {}) => t.app((pts, o) => {
   const { paper } = __jamdraw;
   const el = document.getElementById('overlay'), r = el.getBoundingClientRect();
@@ -9,11 +10,9 @@ const stroke = (t, pts, o = {}) => t.app((pts, o) => {
     el.dispatchEvent(new PointerEvent(type, { pointerId: 9, pointerType: o.type || 'pen', isPrimary: true, bubbles: true, button: 0,
       clientX: r.left + v.x, clientY: r.top + v.y, pressure: p, buttons, ctrlKey: !!o.ctrl }));
   };
-  if (!o.upOnly) {
-    fire('pointerdown', pts[0], 1);
-    for (const p of pts.slice(1)) fire('pointermove', p, 1);
-  }
-  if (!o.noUp) fire('pointerup', pts[pts.length - 1], 0);
+  if (!o.upOnly && !o.moveOnly) fire('pointerdown', pts[0], 1);
+  if (!o.upOnly) for (const p of (o.moveOnly ? pts : pts.slice(1))) fire('pointermove', p, 1);
+  if (!o.noUp && !o.moveOnly) fire('pointerup', pts[pts.length - 1], 0);
 }, pts, o);
 
 // A wobbly line along y, from x0 to x1: up and down by `amp` every point.
@@ -119,6 +118,56 @@ module.exports = (test) => {
     await stroke(t, wobbly(908, 100, 700, 3));
     const edge = (await last(t)).mean;
     check(edge > 896 && edge < 908, `next to a solid black patch the line sticks to its edge, not its middle (${edge.toFixed(1)})`);
+  });
+
+  test('brush: shape assist', async (t) => {
+    const { check, app, key, page, wait } = t;
+    // The recognizer on its own: a line, a circle, an ellipse, an arc, and a scribble that's none of them.
+    const r = await app(async () => {
+      const { recognize } = await import('/js/tools.js');
+      let seed = 5;
+      const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647 - 0.5; };
+      const ring = (rx, ry, from, to) => { const p = []; for (let a = from; a <= to; a += 0.05) p.push({ x: 500 + Math.cos(a) * (rx + rnd() * 6), y: 500 + Math.sin(a) * (ry + rnd() * 6), p: 0.5 }); return p; };
+      const kind = (res) => (!res ? 'none' : res.ellipse ? (Math.abs(res.ellipse.radius[0] - res.ellipse.radius[1]) < 0.01 ? 'circle' : 'ellipse') : res.closed ? 'closed' : 'open');
+      return {
+        line: kind(recognize(Array.from({ length: 50 }, (_, i) => ({ x: 100 + i * 8, y: 100 + i * 2 + rnd() * 6, p: 0.5 })), 6)),
+        circle: kind(recognize(ring(200, 190, 0, Math.PI * 2 + 0.05), 6)),
+        ellipse: kind(recognize(ring(250, 120, 0, Math.PI * 2 + 0.05), 6)),
+        arc: kind(recognize(ring(200, 200, 0, 2), 6)),
+        scribble: kind(recognize(Array.from({ length: 60 }, (_, i) => ({ x: 100 + i * 5, y: 100 + (i % 7) * 30, p: 0.5 })), 6)),
+        loopy: kind(recognize(Array.from({ length: 80 }, (_, i) => { const a = (i / 79) * Math.PI * 2; return { x: 500 + Math.cos(a) * 200 + Math.cos(a * 5) * 60, y: 500 + Math.sin(a) * 200, p: 0.5 }; }), 6)),
+        flatArc: kind(recognize(ring(500, 500, 0, 0.4), 6)), // bends, but too little to call an arc
+        tiny: kind(recognize([{ x: 0, y: 0, p: 1 }, { x: 1, y: 1, p: 1 }], 6)),
+      };
+    });
+    check(r.line === 'open' && r.circle === 'circle' && r.ellipse === 'ellipse' && r.arc === 'open', 'it knows a rough line, circle, ellipse and arc ' + JSON.stringify(r));
+    check(r.scribble === 'none' && r.loopy === 'none' && r.flatArc === 'none' && r.tiny === 'none', 'and leaves anything else alone');
+    // Drawing: hold still at the end and the stroke comes out clean.
+    await key('b');
+    await app(() => { __jamdraw.S.brush.merge = false; __jamdraw.S.brush.size = 10; });
+    const wobblyCircle = (cx, cy, rad) => Array.from({ length: 130 }, (_, i) => { const a = (i / 125) * Math.PI * 2; return [cx + Math.cos(a) * (rad + (i % 2 ? 4 : -4)), cy + Math.sin(a) * (rad + (i % 2 ? 4 : -4)), 0.5]; });
+    await stroke(t, wobblyCircle(300, 300, 150), { noUp: true });
+    await wait(700);
+    await stroke(t, [[300, 300]], { upOnly: true });
+    check(await app(() => { const c = __jamdraw.paper.project.activeLayer.lastChild; return c.children && c.children.every((k) => k.segments.length === 4); }), 'holding still turns a rough circle into a clean ring');
+    await stroke(t, wobblyCircle(700, 300, 120), { noUp: true });
+    await wait(700);
+    await stroke(t, [[820, 300], [840, 400], [860, 500]], { moveOnly: true });
+    check(await app(() => __jamdraw.paper.project.activeLayer.children.length) === 1, '(still drawing)');
+    await stroke(t, [[860, 500]], { upOnly: true });
+    check(await app(() => { const c = __jamdraw.paper.project.activeLayer.lastChild; return !(c.children && c.children.every((k) => k.segments.length === 4)); }), 'moving on after the hold carries on freehand');
+    await page.click('#options [data-v="line"]');
+    await stroke(t, wobblyCircle(500, 750, 150), { noUp: true });
+    await wait(700);
+    await stroke(t, [[500, 750]], { upOnly: true });
+    check(await app(() => { const c = __jamdraw.paper.project.activeLayer.lastChild; return c.closed && c.segments.length === 4 && !!c.strokeColor; }), 'in Line mode it becomes an exact ellipse');
+    await t.button('#options', 'More…');
+    await t.button('#more', 'Shape assist: hold still to straighten');
+    check(await app(() => __jamdraw.S.brush.assist) === false, 'Shape assist can be turned off');
+    await stroke(t, wobblyCircle(500, 750, 100), { noUp: true });
+    await wait(700);
+    await stroke(t, [[500, 750]], { upOnly: true });
+    check(await app(() => __jamdraw.paper.project.activeLayer.lastChild.segments.length) > 4, 'and then a held stroke stays as drawn');
   });
 
   test('brush: the canvas stays put between tools', async (t) => {

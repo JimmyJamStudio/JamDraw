@@ -1,7 +1,7 @@
 // JamDraw: boot, pointer input (mouse, drawing tablet, phone stylus, fingers) and keyboard shortcuts.
-import { S, on, emit } from './state.js';
+import { S, on, emit, normAngle } from './state.js';
 import { resetHistory, undo, redo } from './history.js';
-import { initView, toProject, zoomAt, zoomCenter, panBy, fit, changed, redrawOverlay, overlay, stage } from './view.js';
+import { initView, toProject, zoomAt, zoomCenter, panBy, rotateView, fit, changed, redrawOverlay, overlay, stage } from './view.js';
 import { TOOLS, setSelection, deleteNodes } from './tools.js';
 import * as A from './actions.js';
 import { restoreAutosave, scheduleAutosave, saveFile } from './store.js';
@@ -12,11 +12,10 @@ import { initTextUI } from './textui.js';
 import { exportDialog } from './export.js';
 
 function drawOverlay(ctx) {
-  const w = stage.clientWidth, h = stage.clientHeight;
-  drawGrid(ctx, w, h);
+  drawGrid(ctx);
   const t = TOOLS[S.tool];
   if (t.overlay) t.overlay(ctx);
-  drawGuides(ctx, w, h);
+  drawGuides(ctx);
   emit('frame'); // the Position and size boxes follow along
   // Brush and eraser size ring under the pen or mouse.
   if ((S.tool === 'brush' || S.tool === 'eraser') && hover && !active) {
@@ -56,7 +55,7 @@ function makeEv(e, detail = 1) {
 
 function gestureInfo() {
   const [a, b] = [...touches.values()];
-  return { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) || 1 };
+  return { cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2, d: Math.hypot(a.x - b.x, a.y - b.y) || 1, a: (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI };
 }
 
 overlay.addEventListener('pointerdown', (e) => {
@@ -98,6 +97,7 @@ overlay.addEventListener('pointermove', (e) => {
     touches.set(e.pointerId, { x: e.clientX - r.left, y: e.clientY - r.top });
     if (gesture && touches.size === 2) {
       const g = gestureInfo();
+      rotateView(normAngle(g.a - gesture.a), new paper.Point(g.cx, g.cy)); // twisting two fingers turns the view
       zoomAt(new paper.Point(g.cx, g.cy), g.d / gesture.d);
       panBy(g.cx - gesture.cx, g.cy - gesture.cy);
       gesture = g;
@@ -110,8 +110,9 @@ overlay.addEventListener('pointermove', (e) => {
     return;
   }
   if (sketchDrag) {
-    S.sketch.x += (e.clientX - sketchDrag.x) / paper.view.zoom;
-    S.sketch.y += (e.clientY - sketchDrag.y) / paper.view.zoom;
+    const v = paper.view, d = v.viewToProject(new paper.Point(e.clientX, e.clientY)).subtract(v.viewToProject(new paper.Point(sketchDrag.x, sketchDrag.y)));
+    S.sketch.x += d.x;
+    S.sketch.y += d.y;
     sketchDrag = { x: e.clientX, y: e.clientY };
     changed();
     return;
@@ -207,6 +208,8 @@ window.addEventListener('keydown', (e) => {
   else if (k === ']') A.arrange('forward');
   else if (k === '0') fit();
   else if (k === '1') { zoomCenter(1 / paper.view.zoom); }
+  else if (k === ',') rotateView(-15);
+  else if (k === '.') rotateView(15);
   else if (k === '=' || k === '+') zoomCenter(1.25);
   else if (k === '-') zoomCenter(0.8);
   else if (e.key.startsWith('Arrow') && S.sel.length) {

@@ -2,7 +2,7 @@
 // with pen pressure in ev.pressure (1 for a mouse), and may draw hints on the overlay.
 import { S, emit, toast, isEditable, topItem, editableLayer, unionBounds, setStyle, normAngle } from './state.js';
 import { commit } from './history.js';
-import { px, toView, redrawOverlay, strokeItemOutline, handleBox, handleDot, overlay, UI_COLOR, sketchColorAt } from './view.js';
+import { px, toView, redrawOverlay, strokeItemOutline, handleBox, handleDot, overlay, UI_COLOR, sketchColorAt, rectPath } from './view.js';
 import { isText, bake, bakeAll } from './text.js';
 import { snapPoint, snapRect, clearGuides } from './snap.js';
 import { fillAt, sketchInk, magnetPoint } from './trace.js';
@@ -51,11 +51,11 @@ function handleAt(vp) {
     const h = toView(b[HANDLES[i]]);
     if (h.getDistance(vp) <= 10) return { kind: 'scale', i };
   }
-  const vb = new paper.Rectangle(toView(b.topLeft), toView(b.bottomRight));
+  const inside = b.contains(paper.view.viewToProject(vp));
   for (const i of [0, 2, 4, 6]) {
     const h = toView(b[HANDLES[i]]);
     const d = h.getDistance(vp);
-    if (d > 10 && d < 30 && !vb.contains(vp)) return { kind: 'rotate', i };
+    if (d > 10 && d < 30 && !inside) return { kind: 'rotate', i };
   }
   return null;
 }
@@ -165,20 +165,20 @@ const select = {
     for (const it of S.sel) strokeItemOutline(ctx, it);
     const b = selBounds();
     if (b) {
-      const tl = toView(b.topLeft), br = toView(b.bottomRight);
       ctx.strokeStyle = UI_COLOR;
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 3]);
-      ctx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+      rectPath(ctx, b);
+      ctx.stroke();
       ctx.setLineDash([]);
       for (const h of HANDLES) handleBox(ctx, toView(b[h]));
     }
     if (this.rect) {
-      const a = toView(this.rect.topLeft), c = toView(this.rect.bottomRight);
+      rectPath(ctx, this.rect);
       ctx.fillStyle = 'rgba(47,140,255,.12)';
-      ctx.fillRect(a.x, a.y, c.x - a.x, c.y - a.y);
+      ctx.fill();
       ctx.strokeStyle = UI_COLOR;
-      ctx.strokeRect(a.x, a.y, c.x - a.x, c.y - a.y);
+      ctx.stroke();
     }
   },
 };
@@ -345,9 +345,9 @@ const node = {
       }
     }
     if (this.rect) {
-      const a = toView(this.rect.topLeft), c = toView(this.rect.bottomRight);
+      rectPath(ctx, this.rect);
       ctx.strokeStyle = UI_COLOR;
-      ctx.strokeRect(a.x, a.y, c.x - a.x, c.y - a.y);
+      ctx.stroke();
     }
   },
 };
@@ -553,6 +553,54 @@ function pointsOverlay(ctx, pts, rad, color) {
   }
 }
 
+// Shape assist: a stroke that's nearly a straight line, an ellipse (a circle when nearly round) or a circular arc,
+// as clean points of that shape at the stroke's average pressure; null when it isn't close to any of them. `tol` is
+// how far (drawing units) a stroke may wander from the shape at least.
+export function recognize(pts, tol) {
+  const n = pts.length;
+  if (n < 3) return null;
+  const P = pts.map((q) => new paper.Point(q.x, q.y)), a = P[0], b = P[n - 1];
+  const p = pts.reduce((s, q) => s + q.p, 0) / n;
+  const dots = (list, closed) => ({ pts: list.map((q) => ({ x: q.x, y: q.y, p })), closed });
+  const len = P.reduce((s, q, i) => s + (i ? q.getDistance(P[i - 1]) : 0), 0);
+  const steps = (l) => Math.max(8, Math.ceil(l / Math.max(tol / 2, 1)));
+  // A line: every point near the line from the first to the last.
+  const ab = b.subtract(a), L = ab.length;
+  if (L > tol * 4 && P.every((q) => Math.abs(ab.cross(q.subtract(a))) / L < Math.max(tol, L * 0.04))) {
+    return dots(Array.from({ length: steps(L) + 1 }, (_, i) => a.add(ab.multiply(i / steps(L)))), false);
+  }
+  // An ellipse: a loop (it ends near where it began), as wide each way as its points spread.
+  const c = P.reduce((s, q) => s.add(q), new paper.Point(0, 0)).divide(n);
+  if (a.getDistance(b) < len * 0.15) {
+    let xx = 0, yy = 0, xy = 0;
+    for (const q of P) { const d = q.subtract(c); xx += d.x * d.x; yy += d.y * d.y; xy += d.x * d.y; }
+    const th = Math.atan2(2 * xy, xx - yy) / 2, u = new paper.Point(Math.cos(th), Math.sin(th)), v = new paper.Point(-u.y, u.x);
+    let rx = Math.sqrt((2 * P.reduce((s, q) => s + q.subtract(c).dot(u) ** 2, 0)) / n);
+    let ry = Math.sqrt((2 * P.reduce((s, q) => s + q.subtract(c).dot(v) ** 2, 0)) / n);
+    if (Math.abs(rx - ry) < 0.12 * Math.max(rx, ry)) rx = ry = (rx + ry) / 2; // nearly round: a circle
+    const off = (q) => { const d = q.subtract(c); return Math.abs(Math.hypot(d.dot(u) / rx, d.dot(v) / ry) - 1) * Math.min(rx, ry); };
+    if (P.reduce((s, q) => s + off(q), 0) / n < Math.max(tol, 0.06 * Math.min(rx, ry))) {
+      const k = steps(len);
+      const out = dots(Array.from({ length: k + 1 }, (_, i) => { const t = (2 * Math.PI * i) / k; return c.add(u.multiply(rx * Math.cos(t))).add(v.multiply(ry * Math.sin(t))); }), true);
+      out.ellipse = { center: c, radius: [rx, ry], angle: (th * 180) / Math.PI }; // for an exact one in Line mode
+      return out;
+    }
+    return null;
+  }
+  // An arc: the circle through the points (least squares), if they stay near it and it bends enough to be one.
+  let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, sz = 0, sxz = 0, syz = 0;
+  for (const q of P) { const z = q.x * q.x + q.y * q.y; sx += q.x; sy += q.y; sxx += q.x * q.x; syy += q.y * q.y; sxy += q.x * q.y; sz += z; sxz += q.x * z; syz += q.y * z; }
+  const m = [[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, n]], r = [-sxz, -syz, -sz];
+  const det = (M) => M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1]) - M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0]) + M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]);
+  const D = det(m), col = (j) => m.map((row, i) => row.map((v2, k) => (k === j ? r[i] : v2)));
+  const [A, B, C] = [0, 1, 2].map((j) => det(col(j)) / D);
+  const o = new paper.Point(-A / 2, -B / 2), R = Math.sqrt(o.x * o.x + o.y * o.y - C);
+  const a0 = a.subtract(o).angle, sweep = normAngle(P[n >> 1].subtract(o).angle - a0) + normAngle(b.subtract(o).angle - P[n >> 1].subtract(o).angle);
+  if (!(R > tol * 2) || Math.abs(sweep) < 30 || P.some((q) => Math.abs(q.getDistance(o) - R) > Math.max(tol, R * 0.06))) return null;
+  const k = steps(len);
+  return dots(Array.from({ length: k + 1 }, (_, i) => o.add(new paper.Point({ angle: a0 + (sweep * i) / k, length: R }))), false);
+}
+
 // Steady: the line follows the pointer on a string `steady` × 3 screen pixels long, so wobbles shorter than the
 // string never reach it; on lifting, the line catches up to where the pointer is. Magnet: with a sketch loaded,
 // every point is pulled toward the sketch line under it first (hold Ctrl to draw freely).
@@ -564,8 +612,19 @@ const brush = {
     if (!this.layer) return;
     this.pressure = S.brush.pressure && ev.pointerType === 'pen';
     this.ink = S.brush.magnet ? sketchInk() : null;
-    this.lead = this.raw = this.pull(ev);
+    this.lead = this.raw = this.still = this.pull(ev);
     this.pts = [{ x: this.lead.x, y: this.lead.y, p: ev.pressure }];
+    this.assist = null;
+  },
+  // Holding still for a moment at the end of a stroke (Shape assist): it becomes a clean line, ellipse or arc if
+  // it's close to one, shown before you lift; moving on carries on drawing freehand.
+  hold() {
+    clearTimeout(this.timer);
+    if (!S.brush.assist) return;
+    this.timer = setTimeout(() => { // (up to where the pen is, past a Steady string)
+      this.assist = recognize([...this.pts, { x: this.raw.x, y: this.raw.y, p: this.pts[this.pts.length - 1].p }], px(6));
+      redrawOverlay();
+    }, 550);
   },
   pull(e) { return this.ink && !e.ctrl ? magnetPoint(e.pt, this.ink, px(14), S.brush.pull) : e.pt; },
   drag(ev, list) {
@@ -578,28 +637,47 @@ const brush = {
       this.lead = this.raw.subtract(d.multiply(string / len));
       this.pts.push({ x: this.lead.x, y: this.lead.y, p: e.pressure });
     }
+    if (this.raw.getDistance(this.still) > px(4)) { this.still = this.raw; this.assist = null; this.hold(); }
     redrawOverlay();
   },
   up() {
     if (!this.layer) return;
-    const pts = this.pts;
+    clearTimeout(this.timer);
+    let pts = this.pts;
     const tail = this.raw.subtract(this.lead), steps = Math.ceil(tail.length / px(2)), lastP = pts[pts.length - 1].p;
     for (let i = 1; i <= steps; i++) { const q = this.lead.add(tail.multiply(i / steps)); pts.push({ x: q.x, y: q.y, p: lastP }); }
+    const assist = this.assist;
+    if (assist) pts = assist.pts;
     this.pts = [];
+    this.assist = null;
     const b = S.brush;
     if (b.mode === 'line') {
-      const path = new paper.Path({ insert: false });
-      pts.forEach((p) => path.add(new paper.Point(p.x, p.y)));
-      if (path.segments.length < 2) path.add(path.firstSegment.point.add(new paper.Point(0.01, 0)));
-      path.simplify(Math.max(0.15, px(b.smooth)));
+      let path;
+      if (assist && assist.ellipse) {
+        const e = assist.ellipse;
+        path = new paper.Path.Ellipse({ center: e.center, radius: e.radius, insert: false }).rotate(e.angle, e.center);
+      } else {
+        path = new paper.Path({ insert: false });
+        pts.forEach((p) => path.add(new paper.Point(p.x, p.y)));
+        if (path.segments.length < 2) path.add(path.firstSegment.point.add(new paper.Point(0.01, 0)));
+        path.simplify(Math.max(0.15, px(b.smooth)));
+      }
       setStyle(path, { fill: null, stroke: S.stroke || S.fill || '#1d1418', width: b.size });
       this.layer.addChild(path);
     } else {
       const ink = S.fill || S.stroke || '#1d1418';
-      let thin = null;
-      if (this.pressure) { thin = b.thin; pts.forEach((q) => { q.p = FEEL[b.feel](q.p); }); }
-      else if (b.taper) { thin = b.thin; taper(pts, b.size); }
-      let shape = strokeOutline(pts, b.size, thin);
+      let shape;
+      if (assist && assist.ellipse) {
+        // An exact ring, as wide as the stroke at its average pressure (no seam where the stroke began and ended).
+        const e = assist.ellipse, w = this.pressure ? radius(b.size, b.thin, FEEL[b.feel](pts[0].p)) : b.size / 2;
+        const ring = (d) => new paper.Path.Ellipse({ center: e.center, radius: e.radius.map((r) => Math.max(0.1, r + d)), insert: false }).rotate(e.angle, e.center);
+        shape = ring(w).subtract(ring(-w), { insert: false });
+      } else {
+        let thin = null;
+        if (this.pressure) { thin = b.thin; pts.forEach((q) => { q.p = FEEL[b.feel](q.p); }); }
+        else if (b.taper) { thin = b.thin; taper(pts, b.size); }
+        shape = strokeOutline(pts, b.size, thin);
+      }
       const color = new paper.Color(ink);
       const others = b.merge ? this.layer.children.filter((c) => (c instanceof paper.Path || c instanceof paper.CompoundPath)
         && !isText(c) && c.closed !== false && !c.strokeColor && sameColor(c.fillColor, color) && c.visible && !c.locked && overlaps(shape, c)) : [];
@@ -615,13 +693,13 @@ const brush = {
     commit();
     redrawOverlay();
   },
-  cancel() { this.pts = []; this.layer = null; redrawOverlay(); },
+  cancel() { clearTimeout(this.timer); this.pts = []; this.assist = null; this.layer = null; redrawOverlay(); },
   overlay(ctx) {
     if (!this.pts.length) return;
     const b = S.brush;
     const color = b.mode === 'line' ? (S.stroke || S.fill || '#1d1418') : (S.fill || S.stroke || '#1d1418');
     const thin = this.pressure && b.mode !== 'line' ? b.thin : null;
-    pointsOverlay(ctx, this.pts, (p) => radius(b.size, thin, thin == null ? 1 : FEEL[b.feel](p)), color);
+    pointsOverlay(ctx, this.assist ? this.assist.pts : this.pts, (p) => radius(b.size, thin, thin == null ? 1 : FEEL[b.feel](p)), color);
     if (b.steady) { // the string, from the line to the pointer
       const a = toView(this.lead), c = toView(this.raw);
       ctx.strokeStyle = UI_COLOR;

@@ -8,7 +8,9 @@ Jimmy Jam Studio to draw our own logo and art; offered as-is, free to use (MIT).
   shapes, and shapes (rounded rectangles, ellipses, polygons, stars)
 - **Brush feel:** Steady (the line trails the pointer on a string, smoothing out wobbles, great with a mouse), a
   Magnet that pulls your strokes onto the sketch's lines as you trace (Ctrl to draw freely), and under More…:
-  pressure feel (Soft, Normal, Firm), the thinnest a pressure line gets, and tapered ends for strokes without pressure
+  pressure feel (Soft, Normal, Firm), the thinnest a pressure line gets, and tapered ends for strokes without pressure.
+  **Shape assist:** hold still at the end of a stroke and a rough line, circle, ellipse or arc becomes a clean one.
+  Turn the view like a sheet of paper for comfortable strokes
 - **Color it in:** a fill bucket: tap inside an area closed by lines and it fills with a flat color, tucked under
   the lines, bridging small gaps (Close gaps). **Auto trace** turns the sketch into vector shapes on a new layer:
   one shape per main color (or just the dark ink), with a live preview and settings for colors, detail, smoothing
@@ -58,7 +60,8 @@ width, turn on *Use Windows Ink* in the tablet's settings (Wacom: Wacom Tablet P
 | --- | --- |
 | `V` `A` `P` `B` `E` `R` `G` `T` `I` `H` | Select, points, pen, brush, eraser, shapes, fill, text, pick color, pan |
 | Space + drag, middle mouse, two fingers | Pan |
-| Wheel, pinch, `+` `-` | Zoom; `0` fits the page, `1` is 100% |
+| Wheel, pinch, `+` `-` | Zoom; `0` fits the page (and straightens it), `1` is 100% |
+| `,` `.`, twist two fingers | Turn the view (like turning paper), tap the angle badge to straighten |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
 | `Ctrl+C` `X` `V` `D` | Copy, cut, paste, duplicate |
 | `Ctrl+G` / `Ctrl+Shift+G` | Group / ungroup |

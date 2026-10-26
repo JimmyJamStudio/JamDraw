@@ -46,28 +46,35 @@ export const snapRect = (r, ev, exclude) =>
   snapDelta([r.left, r.center.x, r.right], [r.top, r.center.y, r.bottom], ev, exclude);
 export function clearGuides() { S.guides = null; }
 
-export function drawGrid(ctx, w, h) {
+// A line between two drawing points, on the overlay; on whole pixels so it's crisp when the view isn't turned.
+function line(ctx, ax, ay, bx, by) {
+  const p = toView(new paper.Point(ax, ay)), q = toView(new paper.Point(bx, by));
+  ctx.moveTo(Math.round(p.x) + 0.5, Math.round(p.y) + 0.5);
+  ctx.lineTo(Math.round(q.x) + 0.5, Math.round(q.y) + 0.5);
+}
+
+// The grid lines on the page that are on screen (so it turns with a turned view).
+export function drawGrid(ctx) {
   if (!S.snap.grid) return;
-  const step = S.snap.size * paper.view.zoom;
-  if (step < 6) return; // too dense to be useful
-  const o = toView(new paper.Point(0, 0)), end = toView(new paper.Point(S.doc.w, S.doc.h));
+  const step = S.snap.size;
+  if (step * paper.view.zoom < 6) return; // too dense to be useful
+  const r = paper.view.bounds.intersect(new paper.Rectangle(0, 0, S.doc.w, S.doc.h)); // empty: the loops don't run
   ctx.strokeStyle = 'rgba(47,140,255,.18)';
   ctx.lineWidth = 1;
-  const first = (v) => (v >= 0 ? v : v + Math.ceil(-v / step) * step); // first line on screen
-  const top = Math.max(0, o.y), bottom = Math.min(h, end.y), left = Math.max(0, o.x), right = Math.min(w, end.x);
   ctx.beginPath();
-  for (let x = first(o.x); x <= right + 0.5; x += step) { ctx.moveTo(Math.round(x) + 0.5, top); ctx.lineTo(Math.round(x) + 0.5, bottom); }
-  for (let y = first(o.y); y <= bottom + 0.5; y += step) { ctx.moveTo(left, Math.round(y) + 0.5); ctx.lineTo(right, Math.round(y) + 0.5); }
+  for (let x = Math.ceil(r.left / step) * step; x <= r.right; x += step) line(ctx, x, r.top, x, r.bottom);
+  for (let y = Math.ceil(r.top / step) * step; y <= r.bottom; y += step) line(ctx, r.left, y, r.right, y);
   ctx.stroke();
 }
 
-export function drawGuides(ctx, w, h) {
+export function drawGuides(ctx) {
   const g = S.guides;
   if (!g) return;
+  const r = paper.view.bounds;
   ctx.strokeStyle = '#ff3ea5';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  if (g.x != null) { const x = Math.round(toView(new paper.Point(g.x, 0)).x) + 0.5; ctx.moveTo(x, 0); ctx.lineTo(x, h); }
-  if (g.y != null) { const y = Math.round(toView(new paper.Point(0, g.y)).y) + 0.5; ctx.moveTo(0, y); ctx.lineTo(w, y); }
+  if (g.x != null) line(ctx, g.x, r.top, g.x, r.bottom);
+  if (g.y != null) line(ctx, r.left, g.y, r.right, g.y);
   ctx.stroke();
 }

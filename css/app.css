@@ -143,7 +143,7 @@ dialog.floating textarea { width: 100%; background: var(--bg); color: var(--text
     grid-template-areas: "top" "opts" "stage" "tools"; }
   .brand span, #docname { display: none !important; }
   .panels-toggle { display: flex !important; }
-  #topbar [data-act="zoom-in"], #topbar [data-act="zoom-out"] { display: none; }
+  #topbar [data-act="zoom-in"], #topbar [data-act="zoom-out"], #topbar [data-act="rotate-left"], #topbar [data-act="rotate-right"] { display: none; }
   #topbar { justify-content: space-between; }
   #topbar { gap: 6px; padding-left: 8px; padding-right: 8px; }
   #toolbar { flex-direction: row; border-right: 0; border-top: 1px solid var(--line); overflow-x: auto; overflow-y: hidden;

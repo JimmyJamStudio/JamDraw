@@ -1,6 +1,6 @@
 // The canvas view: zoom, pan, fit, the page (artboard) and sketch layers under the drawing, and the overlay canvas
 // where selection boxes, handles and previews are drawn in screen space.
-import { S, clamp, emit } from './state.js';
+import { S, clamp, emit, normAngle } from './state.js';
 
 export const stage = document.getElementById('stage');
 const paperCanvas = document.getElementById('paper');
@@ -55,12 +55,23 @@ export function zoomAt(viewPt, factor) {
 }
 export function zoomCenter(factor) { zoomAt(new paper.Point(stage.clientWidth / 2, stage.clientHeight / 2), factor); }
 export function panBy(dx, dy) {
-  paper.view.center = paper.view.center.subtract(new paper.Point(dx, dy).divide(paper.view.zoom));
+  // A drag on screen moves the drawing along with it, whichever way the view is turned.
+  const v = paper.view;
+  v.center = v.center.subtract(v.viewToProject(new paper.Point(dx, dy)).subtract(v.viewToProject(new paper.Point(0, 0))));
   changed();
 }
+// Turns the view (not the drawing) by `deg` degrees round a screen point (the middle when left out), the way you turn
+// paper to draw a curve comfortably.
+export function rotateView(deg, viewPt = new paper.Point(stage.clientWidth / 2, stage.clientHeight / 2)) {
+  const v = paper.view;
+  v.rotate(deg, v.viewToProject(viewPt));
+  changed();
+}
+export const viewAngle = () => normAngle(Math.round(paper.view.rotation * 10) / 10);
 export function fit() {
   const w = stage.clientWidth, h = stage.clientHeight;
   if (!w || !h) return;
+  paper.view.rotation = 0;
   paper.view.zoom = Math.min(w / S.doc.w, h / S.doc.h) * 0.88;
   paper.view.center = new paper.Point(S.doc.w / 2, S.doc.h / 2);
   changed();
@@ -147,6 +158,13 @@ export function strokeItemOutline(ctx, item, color = UI_COLOR) {
     ctx.restore();
   }
   ctx.restore();
+}
+// A rectangle in drawing units, outlined on the overlay (a turned view shows it turned).
+export function rectPath(ctx, r) {
+  const pts = [r.topLeft, r.topRight, r.bottomRight, r.bottomLeft].map(toView);
+  ctx.beginPath();
+  pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+  ctx.closePath();
 }
 export function handleBox(ctx, p, size = 8, fill = '#fff', stroke = UI_COLOR) {
   ctx.fillStyle = fill;

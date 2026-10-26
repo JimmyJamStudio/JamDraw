@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.10.0 - 2026-10-25
+
+Drawing like on paper: turn the page, and let rough shapes come out clean.
+
+### Added
+- **Turn the view:** `,` and `.` (or the turn buttons next to zoom, or twisting two fingers on the phone) turn the
+  page on screen, the way you turn paper to draw a curve comfortably. The drawing itself doesn't turn. While it's
+  turned a badge shows the angle; tap it to straighten (`0` fits the page and straightens it too). Selecting,
+  panning, the grid, guides and every tool work as usual in a turned view.
+- **Shape assist** (brush, on by default, under More…): draw a rough line, circle, ellipse or arc and hold still for
+  a moment at the end; it turns into a clean one (you see it before you lift). Nearly round becomes a perfect
+  circle. Keep moving instead and it carries on freehand. In Ink mode a circle becomes an exact ring with no seam; in
+  Line mode an exact ellipse.
+
 ## 0.9.0 - 2026-10-25
 
 Tracing paper, colors from Auto trace, and the loose ends from the review.

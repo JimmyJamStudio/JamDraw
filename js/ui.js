@@ -5,7 +5,7 @@ import { commit, undo, redo, canUndo, canRedo } from './history.js';
 import { TOOLS, setSelection, deleteNodes, smoothNodes } from './tools.js';
 import * as A from './actions.js';
 import * as F from './store.js';
-import { fit, zoomCenter, changed, redrawOverlay, overlay } from './view.js';
+import { fit, zoomCenter, rotateView, viewAngle, changed, redrawOverlay, overlay } from './view.js';
 import { exportDialog, quickExport } from './export.js';
 import { isText, bakeAll } from './text.js';
 import { buildTransform } from './transform.js';
@@ -118,8 +118,9 @@ function buildOptions() {
         seg([['soft', 'Soft'], ['normal', 'Normal'], ['firm', 'Firm']], S.brush.feel, (v) => { S.brush.feel = v; }),
         range('Thinnest %', Math.round(S.brush.thin * 100), 0, 100, 1, (v) => { S.brush.thin = v / 100; }),
         toggle('Taper ends without pressure', S.brush.taper, (v) => { S.brush.taper = v; }),
+        toggle('Shape assist: hold still to straighten', S.brush.assist, (v) => { S.brush.assist = v; }),
         range('Magnet pull %', Math.round(S.brush.pull * 100), 10, 100, 5, (v) => { S.brush.pull = v / 100; }),
-        hint('Ink: filled strokes in the Fill color · Merge joins touching strokes of the same color · Steady: the line trails the pointer on a string, smoothing wobbles · Magnet: lines are pulled onto the sketch\'s dark lines (Ctrl: draw freely) · Soft / Normal / Firm: how hard to press for a full line'),
+        hint('Ink: filled strokes in the Fill color · Merge joins touching strokes of the same color · Steady: the line trails the pointer on a string, smoothing wobbles · Magnet: lines are pulled onto the sketch\'s dark lines (Ctrl: draw freely) · Soft / Normal / Firm: how hard to press for a full line · Shape assist: hold still at the end of a stroke and a rough line, circle, ellipse or arc becomes a clean one'),
       ]), 'Smoothing, pressure feel, thinnest line, taper, magnet pull')],
     eraser: () => [range('Size', S.eraser.size, 2, 200, 1, (v) => { S.eraser.size = v; }), hint('Cuts through shapes and lines on the active layer')],
     shape: () => {
@@ -451,7 +452,8 @@ function help() {
     ['Double-click text', 'Edit it (Ctrl+Enter: done, Esc: cancel)'],
     ['Ctrl+E', 'Export…'],
     ['Space + drag', 'Pan (also middle mouse button, or two fingers)'],
-    ['Wheel / pinch', 'Zoom · 0 fits the page · 1 is 100%'],
+    ['Wheel / pinch', 'Zoom · 0 fits the page (and straightens it) · 1 is 100%'],
+    [', .  / twist two fingers', 'Turn the view, like turning paper to draw a curve (the drawing itself doesn\'t turn)'],
     ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / redo'],
     ['Ctrl+C X V D', 'Copy · cut · paste · duplicate'],
     ['Ctrl+G / Ctrl+Shift+G', 'Group / ungroup'],
@@ -486,6 +488,9 @@ export function act(name, el) {
     case 'redo': return redo();
     case 'zoom-in': return zoomCenter(1.25);
     case 'zoom-out': return zoomCenter(0.8);
+    case 'rotate-left': return rotateView(-15);
+    case 'rotate-right': return rotateView(15);
+    case 'rotate-reset': return rotateView(-viewAngle());
     case 'fit': return fit();
     case 'help': return help();
     case 'sheet-style': case 'sheet-layers': {
@@ -536,6 +541,11 @@ export function buildUI() {
   on('doc', docName);
   on('changed', docName);
   docName();
-  on('zoom', (z) => { $('#zoomlabel').textContent = Math.round(z * 100) + '%'; });
+  on('zoom', (z) => {
+    $('#zoomlabel').textContent = Math.round(z * 100) + '%';
+    const a = viewAngle(); // turned: a badge shows how far, and straightens it when tapped
+    $('#rotlabel').hidden = !a;
+    $('#rotlabel').textContent = a + '°';
+  });
   overlay.style.cursor = TOOLS[S.tool].cursor;
 }
