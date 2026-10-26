@@ -6,6 +6,7 @@ import { px, toView, redrawOverlay, strokeItemOutline, handleBox, handleDot, ove
 import { isText, bake, bakeAll } from './text.js';
 import { snapPoint, snapRect, clearGuides } from './snap.js';
 import { fillAt, sketchInk, magnetPoint } from './trace.js';
+import { FEEL, radius, taper, strokeOutline, makeInk, isInk, spineOf, rebuildInk } from './ink.js';
 
 export function setSelection(items) {
   S.sel = items.filter(Boolean);
@@ -193,9 +194,20 @@ function pathFromHit(res, pt) {
   return it;
 }
 
+// The path being edited is in the drawing, or it's an ink stroke's middle line (see ink.js), which isn't.
+const alive = (p) => !!p && !!(p.parent || (p.data.inkOf && p.data.inkOf.parent));
+const owner = (p) => topItem(p.data.inkOf || p);
+// After a change to an ink stroke's middle line, the stroke is rebuilt around it (and replaces itself).
+function touched() {
+  const p = S.node.path;
+  if (!p || !p.data.inkOf) return;
+  const old = p.data.inkOf, fresh = rebuildInk(p);
+  S.sel = S.sel.map((it) => (it === old ? fresh : it));
+}
+
 function nodeHandleAt(vp) {
   const path = S.node.path;
-  if (!path || !path.parent) return null;
+  if (!alive(path)) return null;
   const segs = path.segments;
   for (const seg of segs) {
     if (!showsHandles(seg)) continue;
@@ -225,7 +237,7 @@ const node = {
         const segs = S.node.segs;
         if (ev.shift) segs.has(h.seg) ? segs.delete(h.seg) : segs.add(h.seg);
         else if (!segs.has(h.seg)) { segs.clear(); segs.add(h.seg); }
-        if (ev.detail >= 2) { toggleSmooth(h.seg); commit(); }
+        if (ev.detail >= 2) { toggleSmooth(h.seg); touched(); commit(); }
         this.mode = 'points';
         // The point under the pointer leads (and snaps); the other selected points keep their distance to it.
         this.lead = h.seg.point.clone();
@@ -241,6 +253,20 @@ const node = {
     }
     const res = hitItem(ev.pt);
     let path = pathFromHit(res, ev.pt);
+    const ink = res && [res.item, res.item.parent].find(isInk);
+    if (ink) {
+      const editing = S.node.path && S.node.path.data.inkOf === ink;
+      if (editing && ev.alt) { // Alt-click: a new point on the middle line
+        const seg = S.node.path.divideAt(S.node.path.getNearestLocation(ev.pt));
+        S.node.segs.clear();
+        S.node.segs.add(seg);
+        touched();
+        commit();
+        redrawOverlay();
+        return;
+      }
+      path = editing ? S.node.path : spineOf(ink);
+    }
     if (path && path.parent && isText(path.parent)) {
       const host = path.parent, at = host.children.indexOf(path);
       bakeAll([host]);
@@ -274,11 +300,11 @@ const node = {
   drag(ev) {
     const want = ev.pt.subtract(this.p0);
     if (this.mode === 'points') {
-      const d = snapPoint(this.lead.add(want), ev, [topItem(S.node.path)]).subtract(this.lead);
+      const d = snapPoint(this.lead.add(want), ev, [owner(S.node.path)]).subtract(this.lead);
       for (const [s, p] of this.starts) s.point = p.add(d);
       this.changed = true;
     } else if (this.mode === 'path') {
-      const total = want.add(snapRect(new paper.Rectangle(this.b0.point.add(want), this.b0.size), ev, [topItem(S.node.path)]));
+      const total = want.add(snapRect(new paper.Rectangle(this.b0.point.add(want), this.b0.size), ev, [owner(S.node.path)]));
       S.node.path.translate(total.subtract(this.moved));
       this.moved = total;
       this.changed = true;
@@ -296,6 +322,7 @@ const node = {
     } else if (this.mode === 'marquee') {
       this.rect = new paper.Rectangle(this.start, ev.pt);
     }
+    if (this.changed) touched();
     redrawOverlay();
   },
   up() {
@@ -325,7 +352,7 @@ const node = {
   },
   overlay(ctx) {
     const path = S.node.path;
-    if (path && path.parent) {
+    if (alive(path)) {
       strokeItemOutline(ctx, path);
       for (const seg of path.segments) {
         if (!showsHandles(seg)) continue;
@@ -362,9 +389,9 @@ export function deleteNodes() {
   for (const s of segs) s.remove();
   S.node.segs.clear();
   if (path.segments.length < 2) {
-    path.remove();
+    (path.data.inkOf || path).remove(); // an ink stroke with no line left goes too
     S.node.path = null;
-  }
+  } else touched();
   commit();
   emit('selection');
   redrawOverlay();
@@ -374,6 +401,7 @@ export function smoothNodes(on) {
     if (on) s.smooth({ type: 'catmull-rom' });
     else { s.handleIn = null; s.handleOut = null; }
   }
+  touched();
   commit();
   redrawOverlay();
 }
@@ -465,71 +493,6 @@ function snap45(from, to) {
 }
 
 // ---------------------------------------------------------------- Brush (pressure ink), Eraser
-// How pressure turns into width: Soft needs a lighter touch for a full line, Firm a heavier one.
-const FEEL = { soft: (p) => p ** 0.6, normal: (p) => p, firm: (p) => p ** 1.6 };
-// A line's half width at weight p (0 to 1): from `thin` of the full width up to all of it; even when thin is null.
-const radius = (size, thin, p) => (size / 2) * (thin == null ? 1 : thin + (1 - thin) * p);
-// Strokes without pressure can still taper: weight builds up over the first few widths and fades over the last.
-function taper(pts, size) {
-  const d = [0];
-  for (let i = 1; i < pts.length; i++) d.push(d[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
-  const len = d[d.length - 1], T = size * 4;
-  pts.forEach((q, i) => { q.p = Math.min(1, d[i] / T, (len - d[i]) / T); });
-}
-
-// Turns sampled pen points into a filled outline: the line's width follows the weights (see radius), then it's
-// fitted to curves.
-export function strokeOutline(pts, size, thin) {
-  const minD = Math.max(px(1.2), size * 0.02);
-  const raw = [];
-  for (const p of pts) {
-    const last = raw[raw.length - 1];
-    if (!last || Math.hypot(p.x - last.x, p.y - last.y) >= minD) raw.push({ ...p });
-  }
-  const rad = (p) => radius(size, thin, p);
-  if (raw.length < 3) {
-    const p = raw[0];
-    return new paper.Path.Circle({ center: [p.x, p.y], radius: Math.max(0.5, rad(p.p)), insert: false });
-  }
-  // Smooth positions and pressure a little (pens are jittery).
-  for (let pass = 0; pass < 2; pass++) {
-    for (let i = 1; i < raw.length - 1; i++) {
-      const a = raw[i - 1], b = raw[i], c = raw[i + 1];
-      b.x = (a.x + 2 * b.x + c.x) / 4;
-      b.y = (a.y + 2 * b.y + c.y) / 4;
-      b.p = (a.p + 2 * b.p + c.p) / 4;
-    }
-  }
-  const n = raw.length;
-  const L = [], R = [];
-  const tangent = (i) => {
-    const a = raw[Math.max(0, i - 1)], b = raw[Math.min(n - 1, i + 1)];
-    const v = new paper.Point(b.x - a.x, b.y - a.y);
-    return v.isZero() ? new paper.Point(1, 0) : v.normalize();
-  };
-  for (let i = 0; i < n; i++) {
-    const t = tangent(i), nrm = new paper.Point(-t.y, t.x), r = rad(raw[i].p);
-    const c = new paper.Point(raw[i].x, raw[i].y);
-    L.push(c.add(nrm.multiply(r)));
-    R.push(c.subtract(nrm.multiply(r)));
-  }
-  const path = new paper.Path({ insert: false });
-  L.forEach((p) => path.add(p));
-  const tEnd = tangent(n - 1), cEnd = new paper.Point(raw[n - 1].x, raw[n - 1].y);
-  path.arcTo(cEnd.add(tEnd.multiply(rad(raw[n - 1].p))), R[n - 1]);
-  for (let i = n - 2; i >= 0; i--) path.add(R[i]);
-  const t0 = tangent(0), c0 = new paper.Point(raw[0].x, raw[0].y);
-  path.arcTo(c0.subtract(t0.multiply(rad(raw[0].p))), L[0]);
-  path.closed = true;
-  path.simplify(Math.max(0.15, px(S.brush.smooth)));
-  try {
-    const clean = path.resolveCrossings().reorient(true, true);
-    return clean;
-  } catch {
-    return path;
-  }
-}
-
 function sameColor(a, b) { return !!a && !!b && a.toCSS(true) === b.toCSS(true) && (a.alpha ?? 1) === (b.alpha ?? 1); }
 function overlaps(a, b) {
   if (!a.bounds.intersects(b.bounds)) return false;
@@ -666,14 +629,13 @@ const brush = {
       this.layer.addChild(path);
     } else {
       const ink = S.fill || S.stroke || '#1d1418';
-      let shape;
+      let shape, thin = null;
       if (assist && assist.ellipse) {
         // An exact ring, as wide as the stroke at its average pressure (no seam where the stroke began and ended).
         const e = assist.ellipse, w = this.pressure ? radius(b.size, b.thin, FEEL[b.feel](pts[0].p)) : b.size / 2;
         const ring = (d) => new paper.Path.Ellipse({ center: e.center, radius: e.radius.map((r) => Math.max(0.1, r + d)), insert: false }).rotate(e.angle, e.center);
         shape = ring(w).subtract(ring(-w), { insert: false });
       } else {
-        let thin = null;
         if (this.pressure) { thin = b.thin; pts.forEach((q) => { q.p = FEEL[b.feel](q.p); }); }
         else if (b.taper) { thin = b.thin; taper(pts, b.size); }
         shape = strokeOutline(pts, b.size, thin);
@@ -687,7 +649,11 @@ const brush = {
       if (others.length) {
         shape.insertAbove(others[others.length - 1]);
         others.forEach((o) => o.remove());
-      } else this.layer.addChild(shape);
+      } else {
+        // On its own (not merged, not an assisted ring) it stays editable ink: the Points tool reshapes its middle line.
+        if (!(assist && assist.ellipse)) makeInk(shape, pts, b.size, thin);
+        this.layer.addChild(shape);
+      }
     }
     this.layer = null;
     commit();
@@ -742,7 +708,7 @@ const eraser = {
     let changed = false;
     for (const it of erasable(this.layer)) {
       if (!it.bounds.intersects(cut.bounds)) continue;
-      if (isText(it)) bake(it);
+      if (isText(it) || isInk(it)) bake(it);
       // Lines need trace: false, or Paper.js returns nothing and the whole line would vanish.
       const line = it instanceof paper.CompoundPath ? it.children.every((c) => !c.closed) : !it.closed;
       let r;

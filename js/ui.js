@@ -10,6 +10,7 @@ import { exportDialog, quickExport } from './export.js';
 import { isText, bakeAll } from './text.js';
 import { buildTransform } from './transform.js';
 import { traceDialog } from './trace.js';
+import { isInk, spineOf } from './ink.js';
 
 const $ = (s) => document.querySelector(s);
 const ICON = {
@@ -50,7 +51,10 @@ export function setTool(t) {
   $('#more').hidden = true;
   overlay.style.cursor = TOOLS[t].cursor;
   if (t !== 'node') { S.node.path = null; S.node.segs.clear(); }
-  if (t === 'node' && S.sel.length === 1 && S.sel[0] instanceof paper.Path) S.node.path = S.sel[0];
+  if (t === 'node' && S.sel.length === 1) {
+    if (isInk(S.sel[0])) S.node.path = spineOf(S.sel[0]); // an ink stroke: its middle line
+    else if (S.sel[0] instanceof paper.Path) S.node.path = S.sel[0];
+  }
   emit('tool');
   redrawOverlay();
 }

@@ -24,7 +24,8 @@ Jimmy Jam Studio to draw our own logo and art; offered as-is, free to use (MIT).
   together, so a logo on it tilts too);
   snapping to the page's edges and center and to other shapes' edges and centers, with pink guides, plus an optional
   grid; hold Ctrl while dragging to place freely
-- **Edit:** move, scale, rotate, flip, group, arrange, point and curve-handle editing, combine shapes (unite,
+- **Edit:** move, scale, rotate, flip, group, arrange, point and curve-handle editing (brush strokes too: the Points
+  tool reshapes a stroke's middle line and it keeps its widths), combine shapes (unite,
   subtract, intersect, exclude), outline a stroke, and **Sticker outline** (one solid outline under the selection: the
   cartoon-logo look), align to each other or to the page
 - **Organise:** layers (show, hide, lock, rename, reorder, and **Tracing paper**: a layer shown faded and soft, as if
@@ -100,6 +101,7 @@ code. `CHROME_PATH` picks the browser; screenshots, exported files and `coverage
 | `js/tools.js` | The tools: select, points, pen, brush, eraser, shapes, text, eyedropper, hand |
 | `js/snap.js`, `js/transform.js` | Snapping and guides; the Position and size boxes |
 | `js/trace.js` | Pixels to shapes: outlines of pixel areas fitted to curves, the fill bucket, Auto trace and its panel |
+| `js/ink.js` | Brush strokes as shapes: pressure outlines, taper, and editable ink (a stroke's middle line and widths) |
 | `js/actions.js` | Things done to the selection: arrange, group, align, combine, outline stroke, sticker outline |
 | `js/text.js`, `js/textui.js` | Fonts and text layout (opentype.js), the text panel and font browser |
 | `js/export.js` | Export dialog and SVG / PNG / JPG / WebP / PDF output |

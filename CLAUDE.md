@@ -34,6 +34,10 @@ layout, CHANGELOG.md for history.
 - Undo is whole-drawing JSON snapshots (`history.js commit()` after every finished change).
 - Text items are `CompoundPath`s with `applyMatrix = false` and `data.text`; `setTextData` re-lays them, `bake()` turns
   them into plain shapes (done automatically before combine, outline, erase and point editing).
+- Ink brush strokes work the same way (`ink.js`): `applyMatrix = false` and `data.ink = { spine, r }` (middle line and
+  widths, in the stroke's own coordinates). The Points tool edits a temporary spine path (`spineOf`, not in the
+  project, so undo snapshots never hold it) and `rebuildInk` replaces the stroke after each change. Merge, erase,
+  combine and outline bake them into plain shapes.
 - Exports clone the visible items into a group and build the SVG document ourselves (`export.js buildSVG`), stripping
   Paper's invalid placeholder attributes (they broke PDF export).
 - Pixels to shapes (`trace.js`): the fill bucket rasterizes the visible drawing (`exportItems` + Paper `rasterize`),

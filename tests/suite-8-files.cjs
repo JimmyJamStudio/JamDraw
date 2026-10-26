@@ -127,6 +127,7 @@ module.exports = (test) => {
       (await import('/js/trace.js')).traceDialog();
     });
     await t.page.click('#tracedlg [data-x="cancel"]');
+    await t.wait(100); // a dialog's close event comes a moment after it closes
     check(await app(() => !document.getElementById('tracedlg').open && __jamdraw.paper.project.layers.length === 1), 'and so does Auto trace');
   });
 };

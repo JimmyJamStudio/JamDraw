@@ -170,6 +170,60 @@ module.exports = (test) => {
     check(await app(() => __jamdraw.paper.project.activeLayer.lastChild.segments.length) > 4, 'and then a held stroke stays as drawn');
   });
 
+  test('brush: editable ink', async (t) => {
+    const { check, app, key, page, V, wait } = t;
+    await key('b');
+    await app(() => { __jamdraw.S.brush.merge = false; __jamdraw.S.brush.size = 16; });
+    await stroke(t, Array.from({ length: 61 }, (_, i) => [200 + i * 8, 400 + (i % 2 ? 2 : -2), 0.3 + 0.5 * Math.sin((i / 60) * Math.PI)]));
+    // Something else selected meanwhile, which editing the stroke leaves selected.
+    await app(() => { const r = new __jamdraw.paper.Path.Rectangle({ point: [900, 900], size: [20, 20], fillColor: '#000' }); __jamdraw.paper.project.activeLayer.insertChild(0, r); __jamdraw.setSel([r]); });
+    const ink = () => app(() => { const c = __jamdraw.paper.project.activeLayer.lastChild; return { ink: !!c.data.ink, apply: c.applyMatrix, b: [c.bounds.x, c.bounds.y, c.bounds.width, c.bounds.height].map(Math.round), n: __jamdraw.paper.project.activeLayer.children.length }; });
+    const s0 = await ink();
+    check(s0.ink && !s0.apply, 'an ink stroke keeps its middle line and widths');
+    // The Points tool opens its middle line; dragging a point bends the whole stroke, widths and all.
+    await key('a');
+    await t.click(await V(440, 400));
+    const spine = () => app(() => { const p = __jamdraw.S.node.path; return p && p.data.inkOf ? p.segments.map((s) => [s.point.x, s.point.y]) : null; });
+    const pts = await spine();
+    check(pts && pts.length >= 2 && Math.abs(pts[0][0] - 200) < 6, 'the Points tool shows the middle line\'s points');
+    await t.wait(50);
+    const mid = pts[Math.floor(pts.length / 2)];
+    await t.click(await V(...mid));
+    await t.drag(await V(...mid), await V(mid[0], mid[1] + 120), 6);
+    const s1 = await ink();
+    check(s1.ink && s1.n === s0.n && s1.b[3] > s0.b[3] + 80, 'dragging a point bends the stroke and it stays editable');
+    check(s1.b[3] < s0.b[3] + 120 + 20, '(as wide as before along the way)');
+    check(await app(() => __jamdraw.S.sel.length === 1 && __jamdraw.S.sel[0] === __jamdraw.paper.project.activeLayer.firstChild), '(and what else was selected stays selected)');
+    const quarter = await app(() => { const p = __jamdraw.S.node.path, q = p.getPointAt(p.length * 0.25); return [q.x, q.y]; });
+    await t.click(await V(...quarter), ['Alt']);
+    check((await spine()).length === pts.length + 1, 'Alt-click adds a point to the middle line');
+    await t.button('#options', 'Smooth');
+    await t.button('#options', 'Corner');
+    const first = (await spine())[0];
+    await t.click(await V(...first));
+    await t.click(await V(...first));
+    check(await app(() => !!__jamdraw.paper.project.activeLayer.lastChild.data.ink), 'smooth, corner and double-click keep it ink');
+    // Moved with Select, its middle line moves with it.
+    await key('v');
+    await app(() => { const c = __jamdraw.paper.project.activeLayer.lastChild; __jamdraw.setSel([c]); c.translate(new __jamdraw.paper.Point(100, 0)); });
+    await key('a');
+    check(Math.abs((await spine())[0][0] - first[0] - 100) < 1, 'a moved stroke\'s middle line moves with it (Points opens on the selected stroke)');
+    const p2 = (await spine())[1];
+    await t.drag(await V(...p2), await V(p2[0], p2[1] - 40), 4);
+    check(await app(() => __jamdraw.S.sel[0] === __jamdraw.paper.project.activeLayer.lastChild), 'the selection follows the rebuilt stroke');
+    // Deleting points down to one leaves nothing to draw: the stroke goes.
+    await app(() => { const p = __jamdraw.S.node.path; p.segments.slice(1).forEach((s) => __jamdraw.S.node.segs.add(s)); });
+    await key('Delete');
+    check(await app(() => __jamdraw.paper.project.activeLayer.children.length) === 1, 'deleting its points down to one removes it');
+    await t.combo('Control', 'z');
+    check((await ink()).ink, 'undo brings it back, still ink');
+    // The eraser turns it into a plain shape.
+    await key('e');
+    await stroke(t, [[440, 300], [440, 500], [440, 560]]);
+    await wait(50);
+    check(await app(() => __jamdraw.paper.project.activeLayer.children.every((c) => !c.data.ink)), 'erasing part of it makes it a plain shape');
+  });
+
   test('brush: the canvas stays put between tools', async (t) => {
     const { check, app, key } = t;
     const tops = [];

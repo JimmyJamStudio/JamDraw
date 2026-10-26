@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.11.0 - 2026-10-26
+
+Brush strokes you can reshape.
+
+### Added
+- **Editable ink:** an Ink brush stroke now keeps its middle line and its widths. With the Points tool (A), click a
+  stroke to see the points of its middle line; drag a point or a curve handle and the whole stroke bends with it,
+  keeping its taper and pressure. Alt-click adds a point, double-click (or Smooth / Corner) changes a point, Delete
+  removes points. It works after moving, turning, sizing or tilting the stroke too.
+- With a stroke selected, switching to the Points tool opens it straight away.
+
+### Changed
+- A stroke becomes a plain shape (no longer editable this way) when it's merged with another (Merge), erased,
+  combined or outlined. Turn Merge off in the brush options to keep every stroke editable.
+- The brush's shape code moved into its own file (`js/ink.js`).
+
 ## 0.10.0 - 2026-10-25
 
 Drawing like on paper: turn the page, and let rough shapes come out clean.

@@ -2,6 +2,7 @@
 // cleanly anywhere. A text item stays editable (font, size, spacing...) until it's turned into plain shapes.
 import { S, toast } from './state.js';
 import { kvGet, kvPut } from './store.js';
+import { isInk } from './ink.js';
 
 export let FONTS = [];
 const parsed = new Map();   // id -> opentype.Font
@@ -115,16 +116,19 @@ export async function setTextData(item, t) {
 }
 
 // Plain shapes from here on (needed before cutting, combining or editing points).
+// Turns a text (or an editable ink stroke) into a plain shape: its matrix goes into its points.
 export function bake(item) {
   item.applyMatrix = true;
   delete item.data.text;
   delete item.data.boxW;
+  delete item.data.ink;
   return item;
 }
 export function bakeAll(items) {
   let n = 0;
   const walk = (it) => {
-    if (isText(it)) { bake(it); n++; } else if (it.children && !(it instanceof paper.CompoundPath)) it.children.forEach(walk);
+    if (isText(it)) { bake(it); n++; } else if (isInk(it)) bake(it);
+    else if (it.children && !(it instanceof paper.CompoundPath)) it.children.forEach(walk);
   };
   items.forEach(walk);
   if (n) toast(n === 1 ? 'Text turned into shapes' : `${n} texts turned into shapes`);

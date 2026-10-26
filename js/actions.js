@@ -162,7 +162,7 @@ export function stickerOutline() {
   const collect = (it) => {
     if (isShape(it)) {
       let s = it.clone({ insert: false });
-      if (s.data && s.data.text) { s.applyMatrix = true; delete s.data.text; }
+      s.applyMatrix = true; // a text's or ink stroke's matrix into its points (no change for plain shapes)
       // Go around the stroke too, not just the middle of it.
       if (it.strokeColor && it.strokeWidth) {
         const line = it instanceof paper.CompoundPath ? it.children.every((c) => !c.closed) : !it.closed;
