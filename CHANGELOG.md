@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.9.0 - 2026-10-25
+
+Tracing paper, colors from Auto trace, and the loose ends from the review.
+
+### Added
+- **Tracing paper** (the page button on each layer in Layers): shows that layer faded and a little soft, like a
+  drawing under a sheet of paper, and locks it. Add a layer above (+ Layer) and ink over it. Tracing paper is a guide:
+  exports leave it out, and the fill bucket only sees your own lines. Click again to take the paper off.
+- **Auto trace adds its colors to the swatches** when you keep it (the ones not there yet), ready for inking and
+  filling.
+
+### Fixed
+- **Auto trace could stop at "Tracing…"** on some pictures (the mascot at High detail among them): a shape with
+  just one sharp corner late in its outline crashed the curve fitting. Since 0.6.0; fixed, with a test.
+- **New text lands where you tap:** its middle for centered text (its left or right edge for left or right
+  aligned), half way down the line. It used to start from its top left corner and then grow from its middle.
+- **The magnet near big solid black areas** (hair, a dark hoodie) pulled lines into the middle of them; it now pulls
+  onto their edge. Thin lines work as before.
+- **On the phone every tool fits across the bottom,** no scrolling to reach the last ones. Hand is left out there
+  (two fingers always pan).
+- **Undo keeps fewer steps for very big drawings** (at least 10), so it can't use up a phone's memory. A drawing like
+  the traced mascot still keeps all 120.
+
 ## 0.8.0 - 2026-10-25
 
 Tilting shapes in 3D, for things seen at an angle (the mascot's headphones).

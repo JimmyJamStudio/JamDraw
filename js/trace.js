@@ -113,7 +113,7 @@ function fitLoop(edges, tol) {
   cuts.forEach((c, k) => {
     const end = k + 1 < cuts.length ? cuts[k + 1] : cuts[0] + n;
     // From pixel corner to pixel corner, through the midpoints of the edges between.
-    const pts = [edges[c].slice(0, 2), ...Array.from({ length: end - c }, (_, i) => soft[(c + i) % n]), edges[end % n].slice(0, 2)];
+    const pts = [edges[c % n].slice(0, 2), ...Array.from({ length: end - c }, (_, i) => soft[(c + i) % n]), edges[end % n].slice(0, 2)];
     const run = new paper.Path({ segments: pts, insert: false });
     run.simplify(tol);
     const segs = run.segments;
@@ -203,7 +203,9 @@ const pageRect = () => new paper.Rectangle(0, 0, S.doc.w, S.doc.h);
 
 // ---------------------------------------------------------------- Magnet (brush strokes drawn onto the sketch's lines)
 // How dark each pixel of the sketch is (0 to 255, squared so black lines count far more than colors), at up to 2048
-// pixels on its longer side; worked out once per sketch. Null without a sketch.
+// pixels on its longer side; worked out once per sketch. Only dark pixels near something light count in full, so a
+// thin line pulls along its middle while a big black patch (hair, a dark hoodie) pulls onto its edge rather than
+// into its middle. Null without a sketch.
 let ink = null;
 export function sketchInk() {
   const sk = S.sketch;
@@ -220,6 +222,8 @@ export function sketchInk() {
     const t = Math.max(0, 110 - (0.299 * d[p] + 0.587 * d[p + 1] + 0.114 * d[p + 2])) / 110;
     dark[i] = Math.round(t * t * 255 * (d[p + 3] / 255));
   }
+  const nearLight = grow(dark.map((v) => (v < 40 ? 1 : 0)), w, h, Math.max(2, Math.round(6 * k)));
+  for (let i = 0; i < dark.length; i++) if (!nearLight[i]) dark[i] >>= 3;
   ink = { src: sk.src, dark, w, h, k };
   return ink;
 }
@@ -356,9 +360,13 @@ export function traceDialog() {
       kept = true;
       d.close();
       layer.activate();
+      // Its colors go into the swatches too, ready for inking and filling.
+      const fresh = [...new Set(layer.children.map((it) => it.fillColor.toCSS(true)))].filter((c) => !S.swatches.includes(c));
+      S.swatches.push(...fresh);
       commit();
       emit('layers');
-      return toast('Traced onto the new layer "Trace"');
+      emit('swatches');
+      return toast(`Traced onto the new layer "Trace"${fresh.length ? ` · ${fresh.length} color${fresh.length === 1 ? '' : 's'} added to the swatches` : ''}`);
     }
     for (const k of ['mode', 'detail']) {
       if (!b.dataset[k]) continue;

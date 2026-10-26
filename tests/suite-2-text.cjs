@@ -1,5 +1,19 @@
 // Text: creating, fonts, editing, cancelling, anchoring, turning into shapes, your own fonts.
 module.exports = (test) => {
+  test('text: new text lands where you tap', async (t) => {
+    const { check, key, app, page, wait } = t;
+    await key('t');
+    for (const [align, side, y] of [['center', 'center', 200], ['left', 'leftCenter', 450], ['right', 'rightCenter', 700]]) {
+      await app((a) => { __jamdraw.S.text.align = a; }, align);
+      await t.click(await t.V(500, y));
+      await page.waitForSelector('#textdlg[open] textarea');
+      await wait(300);
+      const p = await app((side) => { const b = __jamdraw.S.sel[0].bounds[side]; return [b.x, b.y]; }, side);
+      check(Math.hypot(p[0] - 500, p[1] - y) < 3, `${align} aligned text is anchored by its ${side} where you tap`);
+      await page.click('#textdlg [data-tx="done"]');
+    }
+  });
+
   test('text: create, fonts, edit, cancel', async (t) => {
     const { check, P, key, app, combo, page, wait } = t;
     await key('t');

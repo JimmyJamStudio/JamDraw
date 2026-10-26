@@ -19,9 +19,9 @@ function download(name, blob) {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
-// The items to export, as clones (hidden layers and items left out).
+// The items to export, as clones (hidden layers and items left out, and tracing paper, which is only a guide).
 export function exportItems(area) {
-  const src = area === 'selection' ? zOrder(S.sel) : paper.project.layers.filter((l) => l.visible).flatMap((l) => l.children.filter((c) => c.visible));
+  const src = area === 'selection' ? zOrder(S.sel) : paper.project.layers.filter((l) => l.visible && !l.data.paper).flatMap((l) => l.children.filter((c) => c.visible));
   const g = new paper.Group({ insert: false });
   for (const it of src) {
     const k = it.clone({ insert: false });

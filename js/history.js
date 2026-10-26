@@ -2,6 +2,7 @@
 import { S, emit } from './state.js';
 
 const MAX = 120;
+const BUDGET = 30e6; // characters of snapshots kept, so a big drawing keeps fewer steps (at least 10) on a phone
 let stack = [];
 let index = -1;
 
@@ -22,7 +23,8 @@ export function commit() {
   if (snap === stack[index]) return;
   stack = stack.slice(0, index + 1);
   stack.push(snap);
-  if (stack.length > MAX) stack.shift();
+  const keep = Math.min(MAX, Math.max(10, Math.floor(BUDGET / snap.length)));
+  while (stack.length > keep) stack.shift();
   index = stack.length - 1;
   emit('history');
   emit('changed');

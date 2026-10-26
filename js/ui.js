@@ -25,6 +25,7 @@ const ICON = {
   hand: '<path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/>',
   eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  paper: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/>',
 };
 const svg = (name) => `<svg viewBox="0 0 24 24">${ICON[name]}</svg>`;
 const TOOL_LIST = [
@@ -214,6 +215,7 @@ function buildStyle() {
   $('#op-range').onchange = (e) => A.applyOpacity(e.target.value / 100, true);
   on('style', show);
   on('selection', show);
+  on('swatches', renderSwatches);
   show();
   renderSwatches();
 }
@@ -300,6 +302,7 @@ function renderLayers() {
   ul.innerHTML = layers.map((l) => `<li data-i="${l.index}" class="${l === paper.project.activeLayer ? 'active' : ''}">
     <button data-l="vis" title="Show or hide" aria-label="Show or hide" class="${l.visible ? '' : 'off'}">${svg('eye')}</button>
     <button data-l="lock" title="Lock or unlock" aria-label="Lock or unlock" class="${l.locked ? '' : 'off'}">${svg('lock')}</button>
+    <button data-l="paper" title="Tracing paper: show it faded and soft to ink over on a layer above (locked, left out of exports and fills)" aria-label="Tracing paper" class="${l.data.paper ? '' : 'off'}">${svg('paper')}</button>
     <span class="name" title="Double-click to rename">${(l.name || 'Layer').replace(/</g, '&lt;')}</span></li>`).join('');
 }
 function buildLayers() {
@@ -311,6 +314,15 @@ function buildLayers() {
     const b = e.target.closest('[data-l]');
     if (b && b.dataset.l === 'vis') { l.visible = !l.visible; dropHidden(); commit(); }
     else if (b && b.dataset.l === 'lock') { l.locked = !l.locked; dropHidden(); commit(); }
+    else if (b && b.dataset.l === 'paper') {
+      const on = !l.data.paper;
+      l.data.paper = on;
+      l.opacity = on ? 0.35 : 1; // on a white page, the same as a sheet of paper laid over it
+      l.locked = on;
+      dropHidden();
+      commit();
+      if (on) toast('Tracing paper on: add a layer above it (+ Layer) to ink over it');
+    }
     else { l.activate(); emit('layers'); }
   };
   ul.ondblclick = (e) => {

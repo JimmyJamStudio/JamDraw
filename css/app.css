@@ -148,8 +148,9 @@ dialog.floating textarea { width: 100%; background: var(--bg); color: var(--text
   #topbar { gap: 6px; padding-left: 8px; padding-right: 8px; }
   #toolbar { flex-direction: row; border-right: 0; border-top: 1px solid var(--line); overflow-x: auto; overflow-y: hidden;
     padding-bottom: max(8px, env(safe-area-inset-bottom)); }
-  #toolbar button { flex: none; }
-  #toolbar .sep { width: 1px; height: auto; margin: 2px 4px; }
+  /* Every tool fits across the phone: they share the width, and Hand goes (two fingers always pan). */
+  #toolbar button { flex: 1 1 0; min-width: 34px; max-width: 48px; }
+  #toolbar .sep, #toolbar [data-tool="hand"] { display: none; }
   #panel { position: fixed; left: 0; right: 0; bottom: 0; max-height: 62vh; z-index: 10; border-left: 0; border-top: 1px solid var(--line);
     border-radius: 14px 14px 0 0; box-shadow: 0 -10px 30px #000a; transform: translateY(105%); transition: transform .2s; }
   body.sheet-style #panel, body.sheet-layers #panel { transform: none; }

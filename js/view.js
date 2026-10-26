@@ -13,6 +13,15 @@ let drawOverlayFn; // set by initView
 export function initView(drawFn) {
   drawOverlayFn = drawFn;
   paper.setup(paperCanvas);
+  // Tracing paper layers (data.paper) draw a little soft, like lines seen through paper (the fading is their opacity).
+  const draw = paper.Layer.prototype.draw;
+  paper.Layer.prototype.draw = function (ctx, ...rest) {
+    if (!this.data.paper) return draw.call(this, ctx, ...rest);
+    ctx.save();
+    ctx.filter = `blur(${1.2 * (window.devicePixelRatio || 1)}px)`;
+    draw.call(this, ctx, ...rest);
+    ctx.restore();
+  };
   new ResizeObserver(resize).observe(stage);
   resize();
 }

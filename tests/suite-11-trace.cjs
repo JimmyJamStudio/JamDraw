@@ -27,6 +27,10 @@ module.exports = (test) => {
       const set = (x0, y0, x1, y1, v = 1) => { for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) m[y * w + x] = v; };
       set(0, 0, 8, 8); set(2, 2, 6, 6, 0); // a square with a square hole, against two edges
       set(9, 8, 10, 9); set(10, 9, 11, 10); // two pixels touching only at a corner
+      // A teardrop pointing left: its one corner comes late in its outline, so the extra cut half way round wraps.
+      const L = new Uint8Array(100 * 100);
+      for (let y = 0; y < 100; y++) for (let x = 0; x < 100; x++) { const dx = x - 60, dy = y - 50; if (dx * dx + dy * dy < 900 || (x > 10 && x <= 60 && Math.abs(dy) < (x - 10) * 0.6)) L[y * 100 + x] = 1; }
+      const left = T.traceMask(L, 100, 100, { smooth: 1, speck: 1 });
       const loops = T.outlines(m, w, h);
       const ring = T.traceMask(m, w, h, { smooth: 0.5, speck: 2 });
       const all = T.traceMask(m, w, h);
@@ -40,9 +44,10 @@ module.exports = (test) => {
       const grown = T.grow(g.slice(), 5, 5, 2).reduce((a, v) => a + v, 0);
       const fenced = T.grow(g.slice(), 5, 5, 2, Uint8Array.from({ length: 25 }, (_, i) => (i % 5 === 2 ? 1 : 0))).reduce((a, v) => a + v, 0);
       return { loops: loops.length, kids: ring.children.length, areas: ring.children.map((c) => Math.round(c.area)), all: all.className, none, grown, fenced,
-        tear: Math.abs(tear.area / tearArea - 1), tip: Math.round(tear.bounds.top) };
+        tear: Math.abs(tear.area / tearArea - 1), tip: Math.round(tear.bounds.top), leftTip: Math.round(left.bounds.left) };
     });
     check(r.tear < 0.02 && r.tip <= 12, 'a teardrop keeps its size and its sharp tip');
+    check(r.leftTip <= 12, 'whichever way it points');
     check(r.loops === 4, 'outlines: the outside, the hole, and two pixels touching at a corner kept apart');
     check(r.kids === 2 && r.areas[0] > 50 && r.areas[1] < -10, 'a shape with a hole comes out with the hole cut out (specks left out)');
     check(r.all === 'CompoundPath' && r.none === null, 'the same with the default settings; nothing in, nothing out');
@@ -129,13 +134,37 @@ module.exports = (test) => {
     await page.click('#tracedlg [data-mode="color"]');
     await wait(400);
     await page.click('#tracedlg [data-x="keep"]');
-    check((await layer()).length === 4 && await app(() => __jamdraw.paper.project.activeLayer.name === 'Trace') && await toastText() === 'Traced onto the new layer "Trace"', 'Trace keeps it, settings remembered, on the new layer');
+    check((await layer()).length === 4 && await app(() => __jamdraw.paper.project.activeLayer.name === 'Trace'), 'Trace keeps it, settings remembered, on the new layer');
+    check(await toastText() === 'Traced onto the new layer "Trace" · 4 colors added to the swatches'
+      && await app(() => ['#fff4e0', '#e01020', '#1040c0', '#222222'].every((c) => __jamdraw.S.swatches.includes(c))), 'and its colors go into the swatches');
     await t.combo('Control', 'z');
     check(await layer() === null, 'and undo takes it back');
     // A cut-out picture (see-through edges) has no background to leave out.
     await loadSketch(t, 'cutout.png', 100, 100, `x.fillStyle = '#e01020'; x.fillRect(20, 20, 60, 60);`);
     await t.act('sketch-trace');
     check(await info() === '1 color · 1 piece', 'a cut-out traces as it is');
-    await page.click('#tracedlg [data-x="cancel"]');
+    await app(() => { const s = __jamdraw.S.swatches; s.splice(s.indexOf('#e01020'), 1); });
+    await page.click('#tracedlg [data-x="keep"]');
+    check(await toastText() === 'Traced onto the new layer "Trace" · 1 color added to the swatches', 'one new color');
+    await t.act('sketch-trace');
+    await page.click('#tracedlg [data-x="keep"]');
+    check(await toastText() === 'Traced onto the new layer "Trace"', 'none new, nothing to say about swatches');
+  });
+
+  test('trace: tracing paper', async (t) => {
+    const { check, app, key, V, toastText } = t;
+    await t.add({ kind: 'circle', x: 300, y: 300, r: 150, fill: null, stroke: '#1d1418', width: 10 });
+    const paperBtn = () => app(() => document.querySelector('#layers li [data-l="paper"]').click());
+    await paperBtn();
+    check(await app(() => { const l = __jamdraw.paper.project.layers[0]; return l.data.paper && l.opacity === 0.35 && l.locked; })
+      && await toastText() === 'Tracing paper on: add a layer above it (+ Layer) to ink over it', 'Tracing paper fades a layer, softens it and locks it');
+    await t.wait(100); // drawn soft
+    check(await app(async () => !(await import('/js/export.js')).buildSVG({ area: 'page', format: 'svg', bg: 'none', precision: 2 }).svg.includes('<path')), 'exports leave it out');
+    await t.act('layer-add');
+    await key('g');
+    await t.click(await V(300, 300));
+    check(await toastText() === 'That area isn\'t closed: look for a gap in its lines, or make Close gaps bigger', 'the fill bucket only sees your own lines, not the paper');
+    await app(() => document.querySelectorAll('#layers li [data-l="paper"]')[1].click()); // the list is top layer first
+    check(await app(() => { const l = __jamdraw.paper.project.layers[0]; return !l.data.paper && l.opacity === 1 && !l.locked; }), 'and off again');
   });
 };

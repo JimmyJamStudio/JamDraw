@@ -95,10 +95,11 @@ module.exports = (test) => {
     check(await app(() => __jamdraw.S.brush.magnet) && await toastText() === 'Load a sketch (Layers › Sketch to trace) for the magnet to follow', 'Magnet without a sketch says what it needs');
     await stroke(t, wobbly(500, 100, 700, 3));
     check(Math.abs((await last(t)).mean - 500) < 1, '(and draws as usual)');
-    // A sketch with one black line along y = 500.
+    // A sketch with one black line along y = 500, and a solid black block from y = 900 down.
     await app(async () => {
       const c = document.createElement('canvas'); c.width = c.height = 1024;
       const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, 1024, 1024); x.fillStyle = '#111'; x.fillRect(0, 497, 1024, 6);
+      x.fillRect(0, 900, 1024, 124);
       __jamdraw.S.sketch = { src: c.toDataURL(), x: 0, y: 0, scale: 1, w: 1024, h: 1024, opacity: 0.4, visible: true };
       (await import('/js/view.js')).changed();
       await document.getElementById('sketch').decode();
@@ -115,6 +116,9 @@ module.exports = (test) => {
     check(Math.abs((await last(t)).mean - 506) < 1, 'Ctrl draws freely');
     await stroke(t, wobbly(800, 100, 700, 3));
     check(Math.abs((await last(t)).mean - 800) < 1, 'away from any line nothing pulls');
+    await stroke(t, wobbly(908, 100, 700, 3));
+    const edge = (await last(t)).mean;
+    check(edge > 896 && edge < 908, `next to a solid black patch the line sticks to its edge, not its middle (${edge.toFixed(1)})`);
   });
 
   test('brush: the canvas stays put between tools', async (t) => {

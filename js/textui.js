@@ -25,7 +25,10 @@ async function open({ item, at, layer }) {
     try { item = await makeText(props); } catch (e) { toast(e.message); return; }
     setStyle(item, { fill: S.fill || S.stroke || '#1d1418', stroke: null, width: 0 });
     layer.addChild(item);
-    item.translate(at.subtract(item.bounds.topLeft));
+    // Where you tap is where the text is anchored: its left edge, middle or right edge (by its alignment), half way
+    // down the first line, so it grows from there as you type.
+    const b = item.bounds, a = props.align;
+    item.translate(at.subtract(a === 'left' ? b.leftCenter : a === 'right' ? b.rightCenter : b.center));
     isNew = true;
   }
   // What Cancel puts back: the exact outlines and layout, so it works even if the old font is gone.

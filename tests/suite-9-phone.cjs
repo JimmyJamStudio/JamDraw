@@ -5,6 +5,8 @@ module.exports = (test) => {
     const { check, page, wait } = t;
     await t.fresh({ width: 384, height: 832, deviceScaleFactor: 2.8125, isMobile: true, hasTouch: true });
     await page.screenshot({ path: path.join(t.OUT, 'phone.png') });
+    check(await t.app(() => { const tb = document.getElementById('toolbar'); return tb.scrollWidth <= tb.clientWidth && !tb.querySelector('[data-tool="hand"]').offsetParent; }),
+      'every tool fits across the bottom (Hand goes: two fingers pan)');
     await t.act('sheet-style');
     await wait(300);
     check(await t.app(() => document.body.classList.contains('sheet-style')), 'Style opens the sheet');
