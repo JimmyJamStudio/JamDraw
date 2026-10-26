@@ -7,6 +7,7 @@ import { isText, bake, bakeAll } from './text.js';
 import { snapPoint, snapRect, clearGuides } from './snap.js';
 import { fillAt, sketchInk, magnetPoint } from './trace.js';
 import { FEEL, radius, taper, strokeOutline, makeInk, isInk, spineOf, rebuildInk } from './ink.js';
+import { editSymbol, editLayer } from './symbols.js';
 
 export function setSelection(items) {
   S.sel = items.filter(Boolean);
@@ -15,16 +16,18 @@ export function setSelection(items) {
 }
 
 function hitItem(pt) {
-  return paper.project.hitTest(pt, {
+  // Inside a symbol copy the hit is first on its drawing (in no layer), then reported as the copy: check that.
+  const res = paper.project.hitTest(pt, {
     fill: true, stroke: true, segments: true, curves: true, tolerance: px(6),
-    match: (r) => isEditable(r.item),
+    match: (r) => !r.item.layer || isEditable(r.item),
   });
+  return res && isEditable(res.item) ? res : null;
 }
 
 function activeLayer() {
   let l = paper.project.activeLayer;
   if (!editableLayer(l)) {
-    toast(l && l.locked ? 'This layer is locked' : 'This layer is hidden');
+    toast(editLayer() ? 'Finish editing the symbol first (Done, at the top)' : l && l.locked ? 'This layer is locked' : 'This layer is hidden');
     return null;
   }
   return l;
@@ -89,6 +92,7 @@ const select = {
     const res = hitItem(ev.pt);
     const item = res && topItem(res.item);
     if (item && ev.detail >= 2 && isText(item)) { setSelection([item]); emit('edit-text', { item }); return; }
+    if (item && ev.detail >= 2 && item instanceof paper.SymbolItem) { editSymbol(item); return; }
     if (item) {
       if (ev.shift) {
         setSelection(S.sel.includes(item) ? S.sel.filter((i) => i !== item) : [...S.sel, item]);
@@ -252,6 +256,7 @@ const node = {
       return;
     }
     const res = hitItem(ev.pt);
+    if (res && res.item instanceof paper.SymbolItem) { toast('A symbol\'s points are edited inside it: double-click it with Select'); return; }
     let path = pathFromHit(res, ev.pt);
     const ink = res && [res.item, res.item.parent].find(isInk);
     if (ink) {

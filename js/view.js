@@ -14,11 +14,15 @@ export function initView(drawFn) {
   drawOverlayFn = drawFn;
   paper.setup(paperCanvas);
   // Tracing paper layers (data.paper) draw a little soft, like lines seen through paper (the fading is their opacity).
+  // While a symbol is being edited, every other layer shows faded, so it's clear what's being edited.
   const draw = paper.Layer.prototype.draw;
   paper.Layer.prototype.draw = function (ctx, ...rest) {
-    if (!this.data.paper) return draw.call(this, ctx, ...rest);
+    const look = [];
+    if (this.data.paper) look.push(`blur(${1.2 * (window.devicePixelRatio || 1)}px)`);
+    if (!this.data.symbolEdit && this.project.layers.some((l) => l.data.symbolEdit)) look.push('opacity(30%)');
+    if (!look.length) return draw.call(this, ctx, ...rest);
     ctx.save();
-    ctx.filter = `blur(${1.2 * (window.devicePixelRatio || 1)}px)`;
+    ctx.filter = look.join(' ');
     draw.call(this, ctx, ...rest);
     ctx.restore();
   };

@@ -192,8 +192,9 @@ export function fillAt(pt, layer, gapPx) {
   shape.transform(new paper.Matrix().translate(tl).scale(1 / k));
   shape.fillColor = new paper.Color(S.fill || '#1d1418');
   shape.strokeColor = null;
-  const res = paper.project.hitTest(pt, { fill: true, tolerance: 0, match: (r) => topItem(r.item).layer === layer });
-  if (res) shape.insertAbove(topItem(res.item));
+  // (A hit inside a symbol copy is first on its drawing, in no layer, then reported as the copy.)
+  const res = paper.project.hitTest(pt, { fill: true, tolerance: 0, match: (r) => !r.item.layer || topItem(r.item).layer === layer });
+  if (res && topItem(res.item).layer === layer) shape.insertAbove(topItem(res.item));
   else layer.insertChild(0, shape);
   commit();
   emit('changed');

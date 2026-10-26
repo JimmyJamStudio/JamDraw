@@ -1,6 +1,7 @@
 // Export: SVG, PNG, JPG, WebP and PDF, of the whole page, just the selection, or the drawing trimmed to its edges,
 // at any size, with or without a background. Settings are remembered between exports.
 import { S, toast, zOrder, fileName } from './state.js';
+import { expandAll } from './symbols.js';
 
 const KEY = 'jamdraw.export';
 const FORMATS = { svg: 'SVG', png: 'PNG', jpg: 'JPG', webp: 'WebP', pdf: 'PDF' };
@@ -24,7 +25,7 @@ export function exportItems(area) {
   const src = area === 'selection' ? zOrder(S.sel) : paper.project.layers.filter((l) => l.visible && !l.data.paper).flatMap((l) => l.children.filter((c) => c.visible));
   const g = new paper.Group({ insert: false });
   for (const it of src) {
-    const k = it.clone({ insert: false });
+    const k = expandAll(it.clone({ insert: false })); // symbols as plain shapes
     k.opacity *= it.layer.opacity; // the layer's own opacity carries over
     g.addChild(k);
   }

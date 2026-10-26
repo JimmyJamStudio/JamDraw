@@ -11,6 +11,7 @@ import { isText, bakeAll } from './text.js';
 import { buildTransform } from './transform.js';
 import { traceDialog } from './trace.js';
 import { isInk, spineOf } from './ink.js';
+import { makeSymbol, editSymbol, unlinkSymbol, finishSymbol, editLayer } from './symbols.js';
 
 const $ = (s) => document.querySelector(s);
 const ICON = {
@@ -284,6 +285,9 @@ function buildPanelButtons() {
     ['To front', () => A.arrange('front'), 'Ctrl+]'], ['Forward', () => A.arrange('forward'), ']'],
     ['Backward', () => A.arrange('backward'), '['], ['To back', () => A.arrange('back'), 'Ctrl+['],
     ['Group', A.groupSel, 'Ctrl+G'], ['Ungroup', A.ungroupSel, 'Ctrl+Shift+G'],
+    ['Make symbol', makeSymbol, 'Use the selection in many places: duplicate the symbol, and editing one changes them all'],
+    ['Edit symbol', () => editSymbol(), 'Or double-click a symbol'],
+    ['Unlink', unlinkSymbol, 'Turn a symbol copy back into ordinary shapes'],
   ]);
   mk('#combine', [
     ['Unite', () => A.combine('unite'), 'Join the selected shapes into one'],
@@ -338,6 +342,15 @@ function buildLayers() {
     if (name != null) { l.name = name.trim() || l.name; commit(); }
   };
   on('changed', renderLayers);
+  // While a symbol is being edited, a bar over the page says which, with Done.
+  const bar = () => {
+    const l = editLayer();
+    $('#symbar').hidden = !l;
+    if (l) $('#symname').textContent = `${l.name}: every copy changes`;
+  };
+  on('changed', bar);
+  on('layers', bar);
+  bar();
   on('layers', renderLayers);
   renderLayers();
 }
@@ -351,6 +364,7 @@ function layerAct(act) {
     n.insertAbove(l);
     n.activate();
   } else if (act === 'layer-del') {
+    if (l.data.symbolEdit) return toast('Press Done to finish editing the symbol');
     if (p.layers.length < 2) return toast('A drawing needs at least one layer');
     if (l.children.length && !confirm(`Delete "${l.name}" and everything on it?`)) return;
     const i = l.index;
@@ -521,6 +535,7 @@ export function act(name, el) {
     case 'sketch-flip': S.sketch.flip = !S.sketch.flip; changed(); emit('sketch'); emit('changed-soft'); return;
     case 'sketch-colors': return addSketchColors();
     case 'sketch-trace': return traceDialog();
+    case 'symbol-done': return finishSymbol();
     case 'sketch-clear': if (S.sketch && confirm('Remove the sketch?')) { S.sketch = null; S.sketchMove = false; changed(); emit('sketch'); emit('changed-soft'); } return;
   }
 }

@@ -5,6 +5,7 @@ import { commit } from './history.js';
 import { setSelection } from './tools.js';
 import { redrawOverlay } from './view.js';
 import { bakeAll } from './text.js';
+import { expand, relink } from './symbols.js';
 
 const isShape = (it) => it instanceof paper.Path || it instanceof paper.CompoundPath;
 let clipboard = null;
@@ -41,6 +42,7 @@ export function paste() {
   const layer = paper.project.activeLayer;
   const off = 12 / paper.view.zoom;
   const items = clipboard.map((j) => layer.addChild(paper.project.importJSON(j)).translate(new paper.Point(off, off)));
+  relink(items);
   done(items);
 }
 export function selectAll() {
@@ -172,7 +174,8 @@ export function stickerOutline() {
         } catch {}
       }
       shapes.push(s);
-    } else if (it.children) it.children.forEach(collect);
+    } else if (it instanceof paper.SymbolItem) collect(expand(it));
+    else if (it.children) it.children.forEach(collect);
   };
   items.forEach(collect);
   if (!shapes.length) { toast('Nothing to outline'); return; }

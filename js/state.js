@@ -46,7 +46,10 @@ export function toast(msg) {
 }
 
 // Layers the user can draw on and items they can pick.
-export function editableLayer(layer) { return layer && layer.visible && !layer.locked; }
+// While a symbol is being edited (symbols.js) only its editing layer can be changed.
+export function editableLayer(layer) {
+  return layer && layer.visible && !layer.locked && (layer.data.symbolEdit || !paper.project.layers.some((l) => l.data.symbolEdit));
+}
 export function topItem(item) {
   while (item && item.parent && !(item.parent instanceof paper.Layer)) item = item.parent;
   return item;

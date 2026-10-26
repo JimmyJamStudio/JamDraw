@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.12.0 - 2026-10-26
+
+Symbols: draw a part once, use it in every pose.
+
+### Added
+- **Symbols** (side panel, under Arrange): select something and press **Make symbol**. Duplicate it (Ctrl+D,
+  Alt-drag, or copy and paste) for more copies; move, turn, size, tilt or flip each copy as you like. **Double-click
+  a copy** (or Edit symbol) to change it: its drawing comes out where that copy is, the rest of the drawing fades and
+  waits, and every tool works as usual, so whatever you draw goes into the symbol. Press **Done** (the bar at the top)
+  and every copy changes, each staying where it is. **Unlink** turns a copy back into ordinary shapes. Undo and
+  autosave work while you're editing, too.
+- Exports draw symbol copies as ordinary shapes, so the SVG or PDF opens the same in any app. Sticker outline goes
+  round symbol copies.
+
 ## 0.11.0 - 2026-10-26
 
 Brush strokes you can reshape.

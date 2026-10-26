@@ -38,6 +38,11 @@ layout, CHANGELOG.md for history.
   widths, in the stroke's own coordinates). The Points tool edits a temporary spine path (`spineOf`, not in the
   project, so undo snapshots never hold it) and `rebuildInk` replaces the stroke after each change. Merge, erase,
   combine and outline bake them into plain shapes.
+- Symbols (`symbols.js`) are Paper `SymbolItem`s sharing a `SymbolDefinition` (`definition.item.data.symbol` =
+  `{ id, name }`). Editing puts the drawing on a layer with `data.symbolEdit` and hides the copy (`data.symbolEditing`);
+  both live in the project, so undo and autosave carry them. `editableLayer` allows only that layer meanwhile. Hit
+  tests inside a copy run on its drawing (no layer) before reporting the copy, so `match` lets layerless items through
+  and the result is checked after. Exports `expandAll` copies into plain shapes; paste `relink`s copies by id.
 - Exports clone the visible items into a group and build the SVG document ourselves (`export.js buildSVG`), stripping
   Paper's invalid placeholder attributes (they broke PDF export).
 - Pixels to shapes (`trace.js`): the fill bucket rasterizes the visible drawing (`exportItems` + Paper `rasterize`),
