@@ -70,14 +70,33 @@ export function changed() {
     if (sketchImg.getAttribute('src') !== sk.src) sketchImg.src = sk.src;
     sketchImg.style.display = sk.visible ? 'block' : 'none';
     sketchImg.style.opacity = sk.opacity;
-    const sm = m.clone().translate(sk.x, sk.y).scale(sk.scale);
-    sketchImg.style.transform = css(sm);
+    sketchImg.style.transform = css(m.clone().append(sketchMatrix(sk)));
   } else {
     sketchImg.style.display = 'none';
     sketchImg.removeAttribute('src');
   }
   emit('zoom', paper.view.zoom);
   redrawOverlay();
+}
+
+// The sketch's image pixels to drawing units: placed, sized, then turned and flipped about its middle.
+export function sketchMatrix(sk) {
+  const mid = new paper.Point(sk.w / 2, sk.h / 2);
+  return new paper.Matrix().translate(sk.x, sk.y).scale(sk.scale).rotate(sk.angle || 0, mid).scale(sk.flip ? -1 : 1, 1, mid);
+}
+// The sketch's color under a drawing point, or null off the image, where it's see-through or while it's hidden.
+export function sketchColorAt(pt) {
+  const sk = S.sketch;
+  if (!sk || !sk.visible) return null;
+  const p = sketchMatrix(sk).inverseTransform(pt);
+  const x = Math.floor(p.x), y = Math.floor(p.y);
+  if (x < 0 || y < 0 || x >= sk.w || y >= sk.h) return null;
+  const c = document.createElement('canvas');
+  c.width = c.height = 1;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(sketchImg, x, y, 1, 1, 0, 0, 1, 1);
+  const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data;
+  return a < 128 ? null : '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
 }
 
 let pending = false;

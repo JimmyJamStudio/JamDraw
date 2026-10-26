@@ -122,7 +122,7 @@ function buildOptions() {
       return out;
     },
     text: () => [hint('Tap the page to add text, or tap a text to change it · it uses the Fill color · Select › Text to shapes for point editing')],
-    dropper: () => [hint('Tap a shape to use its fill, stroke and stroke width')],
+    dropper: () => [hint('Tap a shape to use its fill, stroke and stroke width · tap the sketch to pick its color into Fill or Stroke')],
     hand: () => [hint('Drag to pan · wheel or pinch to zoom · fingers always pan once a pen has been used')],
   };
   const list = parts[S.tool]();
@@ -220,6 +220,14 @@ function renderSwatches() {
     e.preventDefault();
     removeSwatch(+b.dataset.sw);
   };
+}
+function addSketchColors() {
+  const fresh = F.sketchColors().filter((c) => !S.swatches.includes(c));
+  if (!fresh.length) return toast('The swatches already have the sketch\'s colors');
+  S.swatches.push(...fresh);
+  renderSwatches();
+  emit('changed');
+  toast(`Added ${fresh.length} color${fresh.length === 1 ? '' : 's'} from the sketch`);
 }
 function removeSwatch(i) {
   if (!confirm(`Remove ${S.swatches[i]} from the swatches?`)) return;
@@ -323,7 +331,9 @@ function buildSketch() {
     $('#sketch-move').classList.toggle('on', S.sketchMove);
     $('#sk-op').value = sk ? Math.round(sk.opacity * 100) : 40;
     $('#sk-scale').value = sk ? Math.round((sk.scale * sk.w / S.doc.w) * 100) : 100;
-    ['#sketch-toggle', '#sketch-move', '#sk-op', '#sk-scale'].forEach((s) => ($(s).disabled = !sk));
+    $('#sk-turn').value = sk ? sk.angle || 0 : 0;
+    $('#sketch-flip').classList.toggle('on', !!(sk && sk.flip));
+    ['#sketch-toggle', '#sketch-move', '#sketch-flip', '#sketch-colors', '#sk-op', '#sk-scale', '#sk-turn'].forEach((s) => ($(s).disabled = !sk));
   };
   // These controls are disabled until a sketch is loaded.
   $('#sk-op').oninput = (e) => { S.sketch.opacity = e.target.value / 100; changed(); emit('changed-soft'); };
@@ -336,6 +346,7 @@ function buildSketch() {
     changed();
     emit('changed-soft');
   };
+  $('#sk-turn').oninput = (e) => { S.sketch.angle = +e.target.value; changed(); emit('changed-soft'); };
   on('sketch', sync);
   on('tool', sync);
   sync();
@@ -455,6 +466,8 @@ export function act(name, el) {
     case 'sketch-load': return pickFile('image/*', F.loadSketch);
     case 'sketch-toggle': S.sketch.visible = !S.sketch.visible; changed(); emit('sketch'); emit('changed-soft'); return;
     case 'sketch-move': S.sketchMove = !S.sketchMove; if (S.sketchMove) toast('Drag to move the sketch; tap Move again when done'); emit('sketch'); return;
+    case 'sketch-flip': S.sketch.flip = !S.sketch.flip; changed(); emit('sketch'); emit('changed-soft'); return;
+    case 'sketch-colors': return addSketchColors();
     case 'sketch-clear': if (S.sketch && confirm('Remove the sketch?')) { S.sketch = null; S.sketchMove = false; changed(); emit('sketch'); emit('changed-soft'); } return;
   }
 }

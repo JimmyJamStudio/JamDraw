@@ -2,7 +2,7 @@
 // with pen pressure in ev.pressure (1 for a mouse), and may draw hints on the overlay.
 import { S, emit, toast, isEditable, topItem, editableLayer, unionBounds, setStyle, normAngle } from './state.js';
 import { commit } from './history.js';
-import { px, toView, redrawOverlay, strokeItemOutline, handleBox, handleDot, overlay, UI_COLOR } from './view.js';
+import { px, toView, redrawOverlay, strokeItemOutline, handleBox, handleDot, overlay, UI_COLOR, sketchColorAt } from './view.js';
 import { isText, bake, bakeAll } from './text.js';
 import { snapPoint, snapRect, clearGuides } from './snap.js';
 
@@ -568,19 +568,16 @@ const brush = {
     } else {
       const ink = S.fill || S.stroke || '#1d1418';
       let shape = strokeOutline(pts, b.size, this.pressure);
+      const color = new paper.Color(ink);
+      const others = b.merge ? this.layer.children.filter((c) => (c instanceof paper.Path || c instanceof paper.CompoundPath)
+        && !isText(c) && c.closed !== false && !c.strokeColor && sameColor(c.fillColor, color) && c.visible && !c.locked && overlaps(shape, c)) : [];
+      for (const o of others) shape = shape.unite(o, { insert: false });
       setStyle(shape, { fill: ink, stroke: null, width: 0 });
-      if (b.merge) {
-        const color = new paper.Color(ink);
-        const others = this.layer.children.filter((c) => (c instanceof paper.Path || c instanceof paper.CompoundPath)
-          && !isText(c) && c.closed !== false && !c.strokeColor && sameColor(c.fillColor, color) && c.visible && !c.locked && overlaps(shape, c));
-        for (const o of others) {
-          const u = shape.unite(o, { insert: false });
-          shape = u;
-          o.remove();
-        }
-        setStyle(shape, { fill: ink, stroke: null, width: 0 });
-      }
-      this.layer.addChild(shape);
+      // A merged stroke takes the place of the topmost shape it joined, so it doesn't jump in front of everything else.
+      if (others.length) {
+        shape.insertAbove(others[others.length - 1]);
+        others.forEach((o) => o.remove());
+      } else this.layer.addChild(shape);
     }
     this.layer = null;
     commit();
@@ -695,7 +692,15 @@ const dropper = {
   cursor: 'copy',
   down(ev) {
     const res = paper.project.hitTest(ev.pt, { fill: true, stroke: true, tolerance: px(4) });
-    if (!res) return;
+    if (!res) {
+      // Off the shapes, pick the sketch's color into Fill or Stroke (whichever the color panel is on).
+      const c = sketchColorAt(ev.pt);
+      if (!c) return;
+      S[S.chip] = c;
+      emit('style');
+      toast(`Picked ${c} from the sketch`);
+      return;
+    }
     const it = res.item;
     S.fill = it.fillColor ? it.fillColor.toCSS(true) : null;
     S.stroke = it.strokeColor ? it.strokeColor.toCSS(true) : null;

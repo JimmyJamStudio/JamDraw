@@ -96,10 +96,13 @@
         <button data-act="sketch-load" class="txt">Load image</button>
         <button data-act="sketch-toggle" class="txt" id="sketch-toggle">Hide</button>
         <button data-act="sketch-move" class="txt" id="sketch-move">Move</button>
+        <button data-act="sketch-flip" class="txt" id="sketch-flip" title="Mirror the sketch left to right">Flip</button>
+        <button data-act="sketch-colors" class="txt" id="sketch-colors" title="Add the sketch's main colors to the swatches">Get colors</button>
         <button data-act="sketch-clear" class="txt">Remove</button>
       </div>
       <label class="row">Opacity <input type="range" id="sk-op" min="5" max="100" step="1"></label>
       <label class="row">Size <input type="range" id="sk-scale" min="5" max="400" step="1"></label>
+      <label class="row">Turn <input type="range" id="sk-turn" min="-180" max="180" step="0.5"></label>
     </section>
   </aside>
 </div>

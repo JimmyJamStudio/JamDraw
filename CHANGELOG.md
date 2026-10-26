@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.5.0 - 2026-10-25
+
+Getting ready to redraw the mascot: the sketch helps more, and two fixes from a hands-on review.
+
+### Added
+- **Get colors** (Sketch to trace): adds the sketch's main colors to the swatches in one go. It skips the in-between
+  colors where two areas meet, and keeps small colors that stand out, like a green leaf or toast brown. On the
+  mascot it finds all ten: cream, red, blue, skin, white, black, trouser grey, jam pink, brown and green.
+- **The eyedropper picks colors from the sketch:** tap the sketch (anywhere no shape is on top) and its color goes
+  into Fill or Stroke, whichever the color panel is on.
+- **Turn** and **Flip** for the sketch: straighten a photo of a drawing, or mirror it. Both are saved with the drawing.
+
+### Fixed
+- **A brush stroke that merged into a shape jumped it to the front.** Touching up a dark sticker outline with a dark
+  brush put the whole outline on top and turned the drawing black. The merged shape now stays where the shape it
+  joined was.
+- **Sticker outline left holes:** the insides of letters (o, d, A), a gap cut by the eraser, and tiny specks where
+  shapes met showed through in white. The outline is now solid, as a sticker should be.
+- **Sticker outline now goes around strokes,** so it sticks out by its full width past a shape's outline, not half
+  hidden under it.
+
 ## 0.4.1 - 2026-10-19
 
 JamDraw is public, and online at https://jimmyjamstudio.com/draw/.

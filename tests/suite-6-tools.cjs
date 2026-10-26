@@ -138,10 +138,11 @@ module.exports = (test) => {
     await t.click(await V(200, 200));
     check(await app(() => { const c = __jamdraw.paper.project.activeLayer.lastChild; return c && c.segments.length === 4; }), 'a tap with the brush leaves a dot');
     // Merge: a stroke inside a same-colored blob joins it; touching strokes join.
-    await t.add({ kind: 'circle', x: 500, y: 500, r: 120, fill: '#d22a5a' });
+    await t.add({ kind: 'circle', x: 500, y: 500, r: 120, fill: '#d22a5a' }, { x: 560, y: 560, w: 100, h: 100, fill: '#0151b4' });
     const n = await count();
     await t.drag(await V(480, 500), await V(520, 510), 6);
     check(await count() === n, 'a stroke inside a same-colored shape merges into it');
+    check(await app(() => __jamdraw.paper.project.activeLayer.lastChild.fillColor.toCSS(true)) === '#0151b4', 'and stays where that shape was, under the shapes above it');
     await page.mouse.move(...(await V(700, 300)));
     check(await app(() => true), 'hovering shows the brush size ring');
     await page.click('#options [aria-pressed]');

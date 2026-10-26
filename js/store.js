@@ -129,6 +129,40 @@ export async function placeSVG(file) {
   return item;
 }
 
+// The sketch's main colors, busiest first. Counts a small copy's pixels in coarse color boxes, leaving out pixels on
+// an edge between two colors (the blends there aren't colors anyone picked), then takes each busy box's average
+// color unless it's close to one already taken; small boxes only count when their color stands out (a green leaf).
+export function sketchColors(max = 10) {
+  const img = document.getElementById('sketch');
+  const k = Math.min(1, 256 / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas');
+  const W = (c.width = Math.max(2, Math.round(img.naturalWidth * k)));
+  c.height = Math.max(2, Math.round(img.naturalHeight * k));
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  const d = ctx.getImageData(0, 0, c.width, c.height).data;
+  const box = (i) => ((d[i] >> 4) << 8) | ((d[i + 1] >> 4) << 4) | (d[i + 2] >> 4);
+  const boxes = new Map();
+  let total = 0;
+  for (let i = 0; i < d.length - W * 4; i += 4) {
+    const key = box(i);
+    if (d[i + 3] < 128 || box(i + 4) !== key || box(i + W * 4) !== key) continue;
+    if (!boxes.has(key)) boxes.set(key, { n: 0, r: 0, g: 0, b: 0 });
+    const b = boxes.get(key);
+    b.n++; b.r += d[i]; b.g += d[i + 1]; b.b += d[i + 2];
+    total++;
+  }
+  const out = [];
+  const dist = (rgb) => Math.min(...out.map((o) => Math.hypot(o[0] - rgb[0], o[1] - rgb[1], o[2] - rgb[2])));
+  for (const b of [...boxes.values()].sort((p, q) => q.n - p.n)) {
+    if (out.length === max || b.n < 4) break;
+    const rgb = [b.r / b.n, b.g / b.n, b.b / b.n];
+    if (dist(rgb) >= (b.n >= total * 0.002 ? 20 : 80)) out.push(rgb);
+  }
+  return out.map((rgb) => '#' + rgb.map((v) => Math.round(v).toString(16).padStart(2, '0')).join(''));
+}
+
 export async function loadSketch(file) {
   const src = await readFile(file, 'url');
   const img = new Image();

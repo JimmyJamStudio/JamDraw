@@ -17,7 +17,7 @@ export const S = {
   shape: { kind: 'rect', radius: 0, sides: 6, points: 5, inner: 0.5 },
   doc: { name: 'Untitled', w: 1024, h: 1024, transparent: false },
   swatches: DEFAULT_SWATCHES.slice(),
-  sketch: null,             // { src, x, y, scale, opacity, visible }
+  sketch: null,             // { src, x, y, scale, opacity, visible, angle, flip }
   sketchMove: false,
   snap: { on: true, grid: false, size: 32 }, // snap to the page and shapes; the grid, and its spacing
   guides: null,             // what just snapped: { x, y } in drawing units, for the overlay

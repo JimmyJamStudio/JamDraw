@@ -163,8 +163,13 @@ export function stickerOutline() {
     if (isShape(it)) {
       let s = it.clone({ insert: false });
       if (s.data && s.data.text) { s.applyMatrix = true; delete s.data.text; }
-      if (it.strokeColor && it.strokeWidth && !it.closed) {
-        try { s = paperjsOffset.offsetStroke(it, it.strokeWidth / 2, { join: 'round', cap: 'round', insert: false }); } catch {}
+      // Go around the stroke too, not just the middle of it.
+      if (it.strokeColor && it.strokeWidth) {
+        const line = it instanceof paper.CompoundPath ? it.children.every((c) => !c.closed) : !it.closed;
+        try {
+          s = line ? paperjsOffset.offsetStroke(it, it.strokeWidth / 2, { join: 'round', cap: 'round', insert: false })
+            : paperjsOffset.offset(s, it.strokeWidth / 2, { join: 'round', insert: false });
+        } catch {}
       }
       shapes.push(s);
     } else if (it.children) it.children.forEach(collect);
@@ -175,7 +180,7 @@ export function stickerOutline() {
   try {
     for (const s of shapes.slice(1)) u = u.unite(s, { insert: false });
     const width = Math.max(1, S.strokeWidth);
-    const o = paperjsOffset.offset(u, width, { join: 'round', insert: false });
+    const o = solid(paperjsOffset.offset(u, width, { join: 'round', insert: false }));
     o.fillColor = new paper.Color(S.stroke || '#1d1418');
     o.strokeColor = null;
     o.insertBelow(items[0]);
@@ -185,6 +190,13 @@ export function stickerOutline() {
     console.error(e);
     toast('Could not build the outline for that selection');
   }
+}
+// Fills every hole (letter insides, erased gaps, slivers left where shapes met): keeps only the outermost pieces.
+function solid(o) {
+  if (!(o instanceof paper.CompoundPath)) return o;
+  const kids = o.children.slice();
+  const outer = kids.filter((c) => !kids.some((d) => d !== c && Math.abs(d.area) > Math.abs(c.area) && d.contains(c.interiorPoint)));
+  return new paper.CompoundPath({ children: outer, insert: false }).reorient(true, true);
 }
 
 // Colours and stroke for the selection.

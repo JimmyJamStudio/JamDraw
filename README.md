@@ -16,7 +16,8 @@ Jimmy Jam Studio to draw our own logo and art; offered as-is, free to use (MIT).
 - **Edit:** move, scale, rotate, flip, group, arrange, point and curve-handle editing, combine shapes (unite,
   subtract, intersect, exclude), outline a stroke, and **Sticker outline** (one solid outline under the selection: the
   cartoon-logo look), align to each other or to the page
-- **Organise:** layers (show, hide, lock, rename, reorder), a sketch to trace under the page, fill and stroke colors
+- **Organise:** layers (show, hide, lock, rename, reorder), a sketch to trace under the page (move, size, turn, flip;
+  pick its colors with the eyedropper or add its main colors to the swatches in one go), fill and stroke colors
   with saved swatches, undo and redo
 - **Export:** SVG, PNG, JPG, WebP and PDF, of the whole page, the selection or the drawing trimmed to its edges, any
   size, transparent or with a background; copy SVG code; `.jamdraw` files keep everything editable

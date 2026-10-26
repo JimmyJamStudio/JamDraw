@@ -345,8 +345,15 @@ module.exports = (test) => {
     t.nextDialog = true;
     await t.act('sketch-clear');
     const png = path.join(t.OUT, 'sketch.png');
-    // A small two-color PNG drawn by the page itself.
-    const b64 = await app(() => { const c = document.createElement('canvas'); c.width = 200; c.height = 100; const x = c.getContext('2d'); x.fillStyle = '#c00'; x.fillRect(0, 0, 100, 100); return c.toDataURL('image/png').split(',')[1]; });
+    // A small PNG drawn by the page itself: red on the left, see-through on the right with a small blue square and a
+    // green speck too small to count as a color.
+    const b64 = await app(() => {
+      const c = document.createElement('canvas'); c.width = 200; c.height = 100; const x = c.getContext('2d');
+      x.fillStyle = '#c00'; x.fillRect(0, 0, 100, 100);
+      x.fillStyle = '#00f'; x.fillRect(150, 10, 4, 4);
+      x.fillStyle = '#0f0'; x.fillRect(150, 50, 2, 2);
+      return c.toDataURL('image/png').split(',')[1];
+    });
     fs.writeFileSync(png, Buffer.from(b64, 'base64'));
     const [chooser] = await Promise.all([page.waitForFileChooser(), t.act('sketch-load')]);
     await chooser.accept([png]);
@@ -355,8 +362,35 @@ module.exports = (test) => {
     await page.$eval('#sk-op', (el) => { el.value = '70'; el.dispatchEvent(new Event('input')); });
     await page.$eval('#sk-scale', (el) => { el.value = '50'; el.dispatchEvent(new Event('input')); });
     check(await app(() => { const s = __jamdraw.S.sketch; return s.opacity === 0.7 && Math.round(s.scale * s.w) === 512; }), 'opacity and size sliders');
+    // Now on the page from 256,384 to 768,640: red on the left half.
+    await t.act('sketch-colors');
+    check(await app(() => __jamdraw.S.swatches.includes('#cc0000') && __jamdraw.S.swatches.includes('#0000ff') && !__jamdraw.S.swatches.includes('#00ff00'))
+      && await t.toastText() === 'Added 2 colors from the sketch', 'Get colors adds its main colors to the swatches, small ones only when they stand out');
+    await app(() => { const s = __jamdraw.S.swatches; s.splice(s.indexOf('#0000ff'), 1); });
+    await t.act('sketch-colors');
+    check(await t.toastText() === 'Added 1 color from the sketch', 'and the ones that went missing again');
+    await t.act('sketch-colors');
+    check(await t.toastText() === 'The swatches already have the sketch\'s colors', 'but only once');
+    await t.key('i');
+    await page.click('[data-chip="stroke"]');
+    await t.click(await t.V(300, 500));
+    check(await app(() => __jamdraw.S.stroke) === '#cc0000' && await t.toastText() === 'Picked #cc0000 from the sketch', 'the eyedropper picks the sketch\'s color into the color being edited (Stroke)');
+    await page.click('[data-chip="fill"]');
+    const f0 = await app(() => __jamdraw.S.fill);
+    await t.click(await t.V(700, 500));
+    await t.click(await t.V(100, 100));
+    check(await app(() => __jamdraw.S.fill) === f0, 'see-through parts and outside the sketch pick nothing');
+    await page.$eval('#sk-turn', (el) => { el.value = '180'; el.dispatchEvent(new Event('input')); });
+    await t.click(await t.V(700, 500));
+    check(await app(() => __jamdraw.S.fill) === '#cc0000', 'Turn turns the sketch about its middle');
+    await t.act('sketch-flip');
+    await app(() => { __jamdraw.S.fill = '#123456'; });
+    await t.click(await t.V(700, 500));
+    check(await app(() => __jamdraw.S.fill === '#123456' && document.getElementById('sketch-flip').classList.contains('on')), 'Flip mirrors it');
     await t.act('sketch-toggle');
     check(await app(() => document.getElementById('sketch').style.display) === 'none', 'Hide hides it');
+    await t.click(await t.V(300, 500));
+    check(await app(() => __jamdraw.S.fill) === '#123456', 'a hidden sketch gives no colors');
     await t.act('sketch-toggle');
     await t.act('sketch-move');
     const x0 = await app(() => __jamdraw.S.sketch.x);
@@ -367,7 +401,7 @@ module.exports = (test) => {
     check(await app(() => __jamdraw.S.sketchMove) === false, 'switching tools ends moving the sketch');
     await t.wait(800);
     await t.reload();
-    check(await app(() => !!__jamdraw.S.sketch && __jamdraw.S.sketch.opacity === 0.7), 'the sketch is saved with the drawing');
+    check(await app(() => { const s = __jamdraw.S.sketch; return !!s && s.opacity === 0.7 && s.angle === 180 && s.flip; }), 'the sketch is saved with the drawing, turned and flipped');
     t.nextDialog = false;
     await t.act('sketch-clear');
     check(await app(() => !!__jamdraw.S.sketch), 'Remove asks first');

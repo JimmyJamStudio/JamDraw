@@ -196,6 +196,23 @@ module.exports = (test) => {
     await button('#combine', 'Sticker outline');
     await app(() => { paperjsOffset.offset = window.__realOff; });
     check(await toastText() === 'Could not build the outline for that selection', 'a failed sticker outline says so');
+    // Holes are filled, and strokes are gone around, not just their middle line.
+    await app(() => {
+      const P = __jamdraw.paper, l = P.project.activeLayer;
+      l.removeChildren();
+      const ring = new P.Path.Circle({ center: [200, 200], radius: 100, insert: false }).subtract(new P.Path.Circle({ center: [200, 200], radius: 50, insert: false }), { insert: false });
+      ring.fillColor = '#f2c14e';
+      ring.strokeColor = '#1d1418';
+      ring.strokeWidth = 6;
+      l.addChild(ring);
+    });
+    await add({ x: 400, y: 100, w: 200, h: 200, stroke: '#1d1418', width: 10 });
+    await t.sel(0, 1);
+    await app(() => { __jamdraw.S.strokeWidth = 8; }); // after selecting, which shows the ring's width
+    await button('#combine', 'Sticker outline');
+    const st = await app(() => { const o = __jamdraw.paper.project.activeLayer.firstChild; return { kids: o.children.length, right: Math.round(o.bounds.right) }; });
+    check(st.kids === 2, 'a sticker outline fills holes (the middle of a ring)');
+    check(st.right === 613, 'and goes around a shape\'s stroke as well');
   });
 
   test('actions: colors, width, opacity on the selection', async (t) => {
