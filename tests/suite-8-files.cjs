@@ -118,5 +118,15 @@ module.exports = (test) => {
     await t.combo('Control', 'e');
     await t.page.click('#dlg button[value="cancel"]');
     check(await app(() => !document.getElementById('dlg').open), 'with storage blocked the export dialog still works');
+    await app(async () => {
+      const c = document.createElement('canvas'); c.width = c.height = 20;
+      const x = c.getContext('2d'); x.fillStyle = '#c00'; x.fillRect(5, 5, 10, 10);
+      __jamdraw.S.sketch = { src: c.toDataURL(), x: 0, y: 0, scale: 10, w: 20, h: 20, opacity: 0.4, visible: true };
+      (await import('/js/view.js')).changed();
+      await document.getElementById('sketch').decode();
+      (await import('/js/trace.js')).traceDialog();
+    });
+    await t.page.click('#tracedlg [data-x="cancel"]');
+    check(await app(() => !document.getElementById('tracedlg').open && __jamdraw.paper.project.layers.length === 1), 'and so does Auto trace');
   });
 };

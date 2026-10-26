@@ -9,6 +9,7 @@ import { fit, zoomCenter, changed, redrawOverlay, overlay } from './view.js';
 import { exportDialog, quickExport } from './export.js';
 import { isText, bakeAll } from './text.js';
 import { buildTransform } from './transform.js';
+import { traceDialog } from './trace.js';
 
 const $ = (s) => document.querySelector(s);
 const ICON = {
@@ -18,6 +19,7 @@ const ICON = {
   brush: '<path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/>',
   eraser: '<path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/>',
   shape: '<rect x="3" y="3" width="10" height="10" rx="1"/><circle cx="16" cy="16" r="5"/>',
+  bucket: '<path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/>',
   text: '<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
   dropper: '<path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4z"/>',
   hand: '<path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-6-2.3l-3.6-3.6a2 2 0 0 1 2.8-2.8L7 15"/>',
@@ -32,6 +34,7 @@ const TOOL_LIST = [
   ['brush', 'Brush, with pen pressure (B)'],
   ['eraser', 'Eraser (E)'],
   ['shape', 'Shapes (R)'],
+  ['bucket', 'Fill an area closed by lines (G)'],
   ['text', 'Text, with a font library (T)'],
   ['dropper', 'Pick up colors (I)'],
   ['hand', 'Pan (H, or hold Space)'],
@@ -52,7 +55,7 @@ export function setTool(t) {
 
 function buildToolbar() {
   const bar = $('#toolbar');
-  bar.innerHTML = TOOL_LIST.map(([t, title], i) => (i === 8 ? '<div class="sep"></div>' : '')
+  bar.innerHTML = TOOL_LIST.map(([t, title]) => (t === 'hand' ? '<div class="sep"></div>' : '')
     + `<button data-tool="${t}" title="${title}" aria-label="${title}">${svg(t)}</button>`).join('');
   bar.addEventListener('click', (e) => {
     const b = e.target.closest('[data-tool]');
@@ -121,6 +124,8 @@ function buildOptions() {
       out.push(hint('Shift: square · Alt: from the center'));
       return out;
     },
+    bucket: () => [range('Close gaps', S.bucket.gap, 0, 12, 1, (v) => { S.bucket.gap = v; }),
+      hint('Tap inside an area closed by lines to fill it with the Fill color · it goes under the lines on the active layer')],
     text: () => [hint('Tap the page to add text, or tap a text to change it · it uses the Fill color · Select › Text to shapes for point editing')],
     dropper: () => [hint('Tap a shape to use its fill, stroke and stroke width · tap the sketch to pick its color into Fill or Stroke')],
     hand: () => [hint('Drag to pan · wheel or pinch to zoom · fingers always pan once a pen has been used')],
@@ -333,7 +338,7 @@ function buildSketch() {
     $('#sk-scale').value = sk ? Math.round((sk.scale * sk.w / S.doc.w) * 100) : 100;
     $('#sk-turn').value = sk ? sk.angle || 0 : 0;
     $('#sketch-flip').classList.toggle('on', !!(sk && sk.flip));
-    ['#sketch-toggle', '#sketch-move', '#sketch-flip', '#sketch-colors', '#sk-op', '#sk-scale', '#sk-turn'].forEach((s) => ($(s).disabled = !sk));
+    ['#sketch-toggle', '#sketch-move', '#sketch-flip', '#sketch-colors', '#sketch-trace', '#sk-op', '#sk-scale', '#sk-turn'].forEach((s) => ($(s).disabled = !sk));
   };
   // These controls are disabled until a sketch is loaded.
   $('#sk-op').oninput = (e) => { S.sketch.opacity = e.target.value / 100; changed(); emit('changed-soft'); };
@@ -404,7 +409,7 @@ function docSettings() {
 
 function help() {
   const rows = [
-    ['V A P B E R T I H', 'Select · Points · Pen · Brush · Eraser · Shapes · Text · Pick color · Pan'],
+    ['V A P B E R G T I H', 'Select · Points · Pen · Brush · Eraser · Shapes · Fill · Text · Pick color · Pan'],
     ['Double-click text', 'Edit it (Ctrl+Enter: done, Esc: cancel)'],
     ['Ctrl+E', 'Export…'],
     ['Space + drag', 'Pan (also middle mouse button, or two fingers)'],
@@ -468,6 +473,7 @@ export function act(name, el) {
     case 'sketch-move': S.sketchMove = !S.sketchMove; if (S.sketchMove) toast('Drag to move the sketch; tap Move again when done'); emit('sketch'); return;
     case 'sketch-flip': S.sketch.flip = !S.sketch.flip; changed(); emit('sketch'); emit('changed-soft'); return;
     case 'sketch-colors': return addSketchColors();
+    case 'sketch-trace': return traceDialog();
     case 'sketch-clear': if (S.sketch && confirm('Remove the sketch?')) { S.sketch = null; S.sketchMove = false; changed(); emit('sketch'); emit('changed-soft'); } return;
   }
 }

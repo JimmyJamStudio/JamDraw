@@ -20,7 +20,7 @@ function download(name, blob) {
 }
 
 // The items to export, as clones (hidden layers and items left out).
-function exportItems(area) {
+export function exportItems(area) {
   const src = area === 'selection' ? zOrder(S.sel) : paper.project.layers.filter((l) => l.visible).flatMap((l) => l.children.filter((c) => c.visible));
   const g = new paper.Group({ insert: false });
   for (const it of src) {

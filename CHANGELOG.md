@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.6.0 - 2026-10-25
+
+Coloring in, and turning pictures into shapes.
+
+### Added
+- **Fill bucket (G):** ink your lines, then tap inside an area to fill it with the Fill color, like coloring in. The
+  fill goes under the lines (at the bottom of the active layer, or just above the fill you tapped, to recolor it)
+  and tucks a little under them so no white seam shows. **Close gaps** (in its options) bridges small gaps in
+  hand-drawn lines; an area that still isn't closed says so instead of flooding the page. Every fill is an
+  ordinary shape you can select, recolor or edit.
+- **Auto trace** (Sketch to trace): turns the sketch into vector shapes on a new layer named "Trace", lined up
+  exactly over it. **Colors** gives one shape per main color, biggest at the bottom, each tucked under the ones above
+  so no seams show, with the paper color left out if you like; **Ink only** traces everything darker than a setting
+  (for pen-on-paper drawings). Detail (Low, Medium, High), Smooth and Ignore specks, all with a live preview; Trace
+  keeps it (undo takes it back), Cancel or Esc takes it away. Settings are remembered. The mascot traces at High
+  detail in about a second and a half, all nine colors.
+- The shape outlines from both keep real corners sharp (letters, toast corners) and curves smooth.
+
+### Changed
+- Pop-up panels block keyboard shortcuts while open (the Auto trace panel too, not just the export dialog).
+
 ## 0.5.0 - 2026-10-25
 
 Getting ready to redraw the mascot: the sketch helps more, and two fixes from a hands-on review.

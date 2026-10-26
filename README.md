@@ -6,6 +6,10 @@ Jimmy Jam Studio to draw our own logo and art; offered as-is, free to use (MIT).
 - **Draw:** pen tool (click corners, drag curves), a pressure brush for drawing tablets and phone pens that turns
   strokes into clean vector shapes (Merge joins touching strokes into one), a Line brush, an eraser that cuts through
   shapes, and shapes (rounded rectangles, ellipses, polygons, stars)
+- **Color it in:** a fill bucket: tap inside an area closed by lines and it fills with a flat color, tucked under
+  the lines, bridging small gaps (Close gaps). **Auto trace** turns the sketch into vector shapes on a new layer:
+  one shape per main color (or just the dark ink), with a live preview and settings for colors, detail, smoothing
+  and specks
 - **Text with a font library:** 66 families / 81 styles bundled, sorted into Bubbly, Display, Handwritten, Spooky,
   Fantasy, Sans and Serif, every one free for commercial use (OFL or Apache, `fonts/LICENSES.md`); load your own
   TTF, OTF or WOFF too. Text is real vector outlines from the start, stays editable (font, size, spacing, lines,
@@ -45,7 +49,7 @@ width, turn on *Use Windows Ink* in the tablet's settings (Wacom: Wacom Tablet P
 
 | Keys | Does |
 | --- | --- |
-| `V` `A` `P` `B` `E` `R` `T` `I` `H` | Select, points, pen, brush, eraser, shapes, text, pick color, pan |
+| `V` `A` `P` `B` `E` `R` `G` `T` `I` `H` | Select, points, pen, brush, eraser, shapes, fill, text, pick color, pan |
 | Space + drag, middle mouse, two fingers | Pan |
 | Wheel, pinch, `+` `-` | Zoom; `0` fits the page, `1` is 100% |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Undo / redo |
@@ -64,7 +68,7 @@ The `?` button in the app shows these too.
 
 ```
 npm install                  # once: puppeteer-core, to drive Chrome
-npm test                     # 375+ checks in headless Chrome, then code coverage for every file in js/
+npm test                     # 450+ checks in headless Chrome, then code coverage for every file in js/
 npm test -- --only=text      # just the suites whose name contains "text"
 npm test -- --min=100        # also fail if any file's coverage drops under 100%
 ```
@@ -85,6 +89,7 @@ code. `CHROME_PATH` picks the browser; screenshots, exported files and `coverage
 | `js/main.js` | Boot, pointer input (mouse, pen, touch, pinch, palm rejection), keyboard shortcuts |
 | `js/tools.js` | The tools: select, points, pen, brush, eraser, shapes, text, eyedropper, hand |
 | `js/snap.js`, `js/transform.js` | Snapping and guides; the Position and size boxes |
+| `js/trace.js` | Pixels to shapes: outlines of pixel areas fitted to curves, the fill bucket, Auto trace and its panel |
 | `js/actions.js` | Things done to the selection: arrange, group, align, combine, outline stroke, sticker outline |
 | `js/text.js`, `js/textui.js` | Fonts and text layout (opentype.js), the text panel and font browser |
 | `js/export.js` | Export dialog and SVG / PNG / JPG / WebP / PDF output |

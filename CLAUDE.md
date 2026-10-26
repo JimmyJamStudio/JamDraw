@@ -36,6 +36,10 @@ layout, CHANGELOG.md for history.
   them into plain shapes (done automatically before combine, outline, erase and point editing).
 - Exports clone the visible items into a group and build the SVG document ourselves (`export.js buildSVG`), stripping
   Paper's invalid placeholder attributes (they broke PDF export).
+- Pixels to shapes (`trace.js`): the fill bucket rasterizes the visible drawing (`exportItems` + Paper `rasterize`),
+  flood-fills with gap closing (`areaAt`), and Auto trace labels the sketch's pixels by its main colors
+  (`store.js sketchColors`). Both turn masks into curves with `traceMask`: pixel-edge outlines, corners kept sharp,
+  runs between corners fitted with Paper's `simplify` (fitting a whole closed loop at once collapses small loops).
 
 ## Gotchas
 

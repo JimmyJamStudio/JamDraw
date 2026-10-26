@@ -99,6 +99,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 .popup button:hover { background: var(--panel-2); }
 dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 12px; max-width: min(520px, 92vw); }
 dialog::backdrop { background: #0008; }
+#tracedlg::backdrop { background: transparent; } /* the preview shows on the page behind it */
 dialog .row { color: var(--text); }
 dialog table { border-collapse: collapse; width: 100%; font-size: 13px; }
 dialog td { padding: 3px 6px; border-bottom: 1px solid var(--line); }

@@ -98,6 +98,7 @@
         <button data-act="sketch-move" class="txt" id="sketch-move">Move</button>
         <button data-act="sketch-flip" class="txt" id="sketch-flip" title="Mirror the sketch left to right">Flip</button>
         <button data-act="sketch-colors" class="txt" id="sketch-colors" title="Add the sketch's main colors to the swatches">Get colors</button>
+        <button data-act="sketch-trace" class="txt" id="sketch-trace" title="Turn the sketch into shapes on a new layer">Auto trace</button>
         <button data-act="sketch-clear" class="txt">Remove</button>
       </div>
       <label class="row">Opacity <input type="range" id="sk-op" min="5" max="100" step="1"></label>
@@ -122,6 +123,7 @@
 
 <dialog id="dlg"><form method="dialog" id="dlg-body"></form></dialog>
 <dialog id="textdlg" class="floating"></dialog>
+<dialog id="tracedlg" class="floating"></dialog>
 <input type="file" id="file" hidden>
 <div id="toast" role="status"></div>
 

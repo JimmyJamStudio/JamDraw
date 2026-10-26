@@ -162,13 +162,13 @@ stage.addEventListener('wheel', (e) => {
 }, { passive: false });
 
 // ---------------------------------------------------------------- keyboard
-const KEY_TOOLS = { v: 'select', a: 'node', p: 'pen', b: 'brush', e: 'eraser', r: 'shape', u: 'shape', t: 'text', i: 'dropper', h: 'hand' };
+const KEY_TOOLS = { v: 'select', a: 'node', p: 'pen', b: 'brush', e: 'eraser', r: 'shape', u: 'shape', g: 'bucket', t: 'text', i: 'dropper', h: 'hand' };
 
 window.addEventListener('keydown', (e) => {
   const tag = (e.target.tagName || '').toLowerCase();
   // Not while typing (a ticked checkbox doesn't count), or under a pop-up dialog (the text panel doesn't block them).
   const typing = tag === 'textarea' || tag === 'select' || (tag === 'input' && e.target.type !== 'checkbox');
-  if (typing || document.getElementById('dlg').open) return;
+  if (typing || document.querySelector('dialog:modal')) return;
   const k = e.key.toLowerCase();
   const ctrl = e.ctrlKey || e.metaKey;
   if (e.key === ' ') {

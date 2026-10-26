@@ -5,6 +5,7 @@ import { commit } from './history.js';
 import { px, toView, redrawOverlay, strokeItemOutline, handleBox, handleDot, overlay, UI_COLOR, sketchColorAt } from './view.js';
 import { isText, bake, bakeAll } from './text.js';
 import { snapPoint, snapRect, clearGuides } from './snap.js';
+import { fillAt } from './trace.js';
 
 export function setSelection(items) {
   S.sel = items.filter(Boolean);
@@ -711,6 +712,16 @@ const dropper = {
   drag() {}, up() {}, cancel() {},
 };
 
+// ---------------------------------------------------------------- Fill bucket (the work is in trace.js)
+const bucket = {
+  cursor: 'crosshair',
+  down(ev) {
+    const layer = activeLayer();
+    if (layer) fillAt(ev.pt, layer, S.bucket.gap);
+  },
+  drag() {}, up() {}, cancel() {},
+};
+
 // ---------------------------------------------------------------- Text (the editor lives in textui.js)
 const text = {
   cursor: 'text',
@@ -726,4 +737,4 @@ const text = {
 
 const hand = { cursor: 'grab', cancel() {} }; // main.js pans while the hand tool is on
 
-export const TOOLS = { select, node, pen, brush, eraser, shape, text, dropper, hand };
+export const TOOLS = { select, node, pen, brush, eraser, shape, bucket, text, dropper, hand };
