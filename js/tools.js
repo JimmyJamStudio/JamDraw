@@ -5,7 +5,7 @@ import { commit } from './history.js';
 import { px, toView, redrawOverlay, strokeItemOutline, handleBox, handleDot, overlay, UI_COLOR, sketchColorAt } from './view.js';
 import { isText, bake, bakeAll } from './text.js';
 import { snapPoint, snapRect, clearGuides } from './snap.js';
-import { fillAt } from './trace.js';
+import { fillAt, sketchInk, magnetPoint } from './trace.js';
 
 export function setSelection(items) {
   S.sel = items.filter(Boolean);
@@ -465,15 +465,28 @@ function snap45(from, to) {
 }
 
 // ---------------------------------------------------------------- Brush (pressure ink), Eraser
-// Turns sampled pen points into a filled outline: the line's width follows the pressure, then it's fitted to curves.
-export function strokeOutline(pts, size, usePressure) {
+// How pressure turns into width: Soft needs a lighter touch for a full line, Firm a heavier one.
+const FEEL = { soft: (p) => p ** 0.6, normal: (p) => p, firm: (p) => p ** 1.6 };
+// A line's half width at weight p (0 to 1): from `thin` of the full width up to all of it; even when thin is null.
+const radius = (size, thin, p) => (size / 2) * (thin == null ? 1 : thin + (1 - thin) * p);
+// Strokes without pressure can still taper: weight builds up over the first few widths and fades over the last.
+function taper(pts, size) {
+  const d = [0];
+  for (let i = 1; i < pts.length; i++) d.push(d[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  const len = d[d.length - 1], T = size * 4;
+  pts.forEach((q, i) => { q.p = Math.min(1, d[i] / T, (len - d[i]) / T); });
+}
+
+// Turns sampled pen points into a filled outline: the line's width follows the weights (see radius), then it's
+// fitted to curves.
+export function strokeOutline(pts, size, thin) {
   const minD = Math.max(px(1.2), size * 0.02);
   const raw = [];
   for (const p of pts) {
     const last = raw[raw.length - 1];
     if (!last || Math.hypot(p.x - last.x, p.y - last.y) >= minD) raw.push({ ...p });
   }
-  const rad = (p) => (size / 2) * (usePressure ? 0.12 + 0.88 * p : 1);
+  const rad = (p) => radius(size, thin, p);
   if (raw.length < 3) {
     const p = raw[0];
     return new paper.Path.Circle({ center: [p.x, p.y], radius: Math.max(0.5, rad(p.p)), insert: false });
@@ -525,38 +538,53 @@ function overlaps(a, b) {
   return (pb && a.contains(pb)) || (pa && b.contains(pa));
 }
 
-function pointsOverlay(ctx, pts, size, usePressure, color) {
-  if (!pts.length) return;
+// The stroke so far, drawn on the overlay; rad(p) is the half width at a point's pressure.
+function pointsOverlay(ctx, pts, rad, color) {
   ctx.fillStyle = color;
   ctx.strokeStyle = color;
   ctx.lineCap = 'round';
   const z = paper.view.zoom;
   for (let i = 0; i < pts.length; i++) {
     const p = pts[i], q = pts[i - 1] || p;
-    const r = (size / 2) * (usePressure ? 0.12 + 0.88 * p.p : 1) * z;
+    const r = rad(p.p) * z;
     const a = toView(new paper.Point(q.x, q.y)), b = toView(new paper.Point(p.x, p.y));
     ctx.lineWidth = r * 2;
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
   }
 }
 
+// Steady: the line follows the pointer on a string `steady` × 3 screen pixels long, so wobbles shorter than the
+// string never reach it; on lifting, the line catches up to where the pointer is. Magnet: with a sketch loaded,
+// every point is pulled toward the sketch line under it first (hold Ctrl to draw freely).
 const brush = {
   cursor: 'crosshair',
   pts: [],
   down(ev) {
     this.layer = activeLayer();
     if (!this.layer) return;
-    this.pts = [{ x: ev.pt.x, y: ev.pt.y, p: ev.pressure }];
     this.pressure = S.brush.pressure && ev.pointerType === 'pen';
+    this.ink = S.brush.magnet ? sketchInk() : null;
+    this.lead = this.raw = this.pull(ev);
+    this.pts = [{ x: this.lead.x, y: this.lead.y, p: ev.pressure }];
   },
+  pull(e) { return this.ink && !e.ctrl ? magnetPoint(e.pt, this.ink, px(14), S.brush.pull) : e.pt; },
   drag(ev, list) {
     if (!this.layer) return;
-    for (const e of list) this.pts.push({ x: e.pt.x, y: e.pt.y, p: e.pressure });
+    const string = px(S.brush.steady * 3);
+    for (const e of list) {
+      this.raw = this.pull(e);
+      const d = this.raw.subtract(this.lead), len = d.length;
+      if (len <= string) continue;
+      this.lead = this.raw.subtract(d.multiply(string / len));
+      this.pts.push({ x: this.lead.x, y: this.lead.y, p: e.pressure });
+    }
     redrawOverlay();
   },
   up() {
     if (!this.layer) return;
     const pts = this.pts;
+    const tail = this.raw.subtract(this.lead), steps = Math.ceil(tail.length / px(2)), lastP = pts[pts.length - 1].p;
+    for (let i = 1; i <= steps; i++) { const q = this.lead.add(tail.multiply(i / steps)); pts.push({ x: q.x, y: q.y, p: lastP }); }
     this.pts = [];
     const b = S.brush;
     if (b.mode === 'line') {
@@ -568,7 +596,10 @@ const brush = {
       this.layer.addChild(path);
     } else {
       const ink = S.fill || S.stroke || '#1d1418';
-      let shape = strokeOutline(pts, b.size, this.pressure);
+      let thin = null;
+      if (this.pressure) { thin = b.thin; pts.forEach((q) => { q.p = FEEL[b.feel](q.p); }); }
+      else if (b.taper) { thin = b.thin; taper(pts, b.size); }
+      let shape = strokeOutline(pts, b.size, thin);
       const color = new paper.Color(ink);
       const others = b.merge ? this.layer.children.filter((c) => (c instanceof paper.Path || c instanceof paper.CompoundPath)
         && !isText(c) && c.closed !== false && !c.strokeColor && sameColor(c.fillColor, color) && c.visible && !c.locked && overlaps(shape, c)) : [];
@@ -589,7 +620,15 @@ const brush = {
     if (!this.pts.length) return;
     const b = S.brush;
     const color = b.mode === 'line' ? (S.stroke || S.fill || '#1d1418') : (S.fill || S.stroke || '#1d1418');
-    pointsOverlay(ctx, this.pts, b.size, this.pressure && b.mode !== 'line', color);
+    const thin = this.pressure && b.mode !== 'line' ? b.thin : null;
+    pointsOverlay(ctx, this.pts, (p) => radius(b.size, thin, thin == null ? 1 : FEEL[b.feel](p)), color);
+    if (b.steady) { // the string, from the line to the pointer
+      const a = toView(this.lead), c = toView(this.raw);
+      ctx.strokeStyle = UI_COLOR;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(c.x, c.y); ctx.stroke();
+      handleDot(ctx, a, 3);
+    }
   },
 };
 
@@ -620,7 +659,7 @@ const eraser = {
   },
   up() {
     if (!this.layer) return;
-    const cut = strokeOutline(this.pts, S.eraser.size, this.pressure);
+    const cut = strokeOutline(this.pts, S.eraser.size, this.pressure ? 0.12 : null);
     this.pts = [];
     let changed = false;
     for (const it of erasable(this.layer)) {
@@ -642,7 +681,7 @@ const eraser = {
   },
   cancel() { this.pts = []; this.layer = null; redrawOverlay(); },
   overlay(ctx) {
-    if (this.pts.length) pointsOverlay(ctx, this.pts, S.eraser.size, this.pressure, 'rgba(255,92,138,.45)');
+    if (this.pts.length) pointsOverlay(ctx, this.pts, (p) => radius(S.eraser.size, this.pressure ? 0.12 : null, p), 'rgba(255,92,138,.45)');
   },
 };
 

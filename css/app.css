@@ -44,12 +44,15 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 #toolbar .sep { height: 1px; background: var(--line); margin: 4px 2px; flex: none; }
 
 #options { grid-area: opts; display: flex; align-items: center; gap: 10px; padding: 6px 10px; background: var(--panel);
-  border-bottom: 1px solid var(--line); min-height: 46px; overflow-x: auto; white-space: nowrap; }
+  border-bottom: 1px solid var(--line); min-height: 47px; overflow-x: auto; white-space: nowrap; }
 #options label { display: flex; align-items: center; gap: 6px; color: var(--dim); }
 #options input[type="range"] { width: 120px; flex: none; }
 #options input[type="number"] { width: 64px; }
 #options .hint { color: var(--dim); font-size: 12px; }
 #options > * { flex: none; }
+/* The hint gives way (ending in "…", the whole of it on hover) so the strip doesn't need a scrollbar, which would
+   make the canvas jump when switching tools. */
+#options > .hint { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 #stage { grid-area: stage; position: relative; overflow: hidden; background: var(--stage); touch-action: none; }
 #artboard, #sketch { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; }
@@ -97,6 +100,14 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
 .popup[hidden] { display: none; }
 .popup button { justify-content: flex-start; border-color: transparent; background: none; }
 .popup button:hover { background: var(--panel-2); }
+/* More settings for a tool, under its More… button */
+#more { position: fixed; z-index: 20; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px;
+  display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 30px #000a; width: min(360px, calc(100vw - 16px)); }
+#more[hidden] { display: none; }
+#more label { display: flex; align-items: center; gap: 8px; color: var(--dim); }
+#more input[type="range"] { flex: 1; min-width: 0; }
+#more input[type="number"] { width: 64px; }
+#more .hint { color: var(--dim); font-size: 12px; line-height: 1.4; }
 dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 12px; max-width: min(520px, 92vw); }
 dialog::backdrop { background: #0008; }
 #tracedlg::backdrop { background: transparent; } /* the preview shows on the page behind it */

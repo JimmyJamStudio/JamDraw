@@ -160,8 +160,9 @@ module.exports = (test) => {
     await page.$eval('#options input[type="number"]', (el) => { el.value = '40'; el.dispatchEvent(new Event('change')); });
     await page.$eval('#options input[type="range"]', (el) => { el.value = '30'; el.dispatchEvent(new Event('input')); });
     check(await app(() => __jamdraw.S.brush.size) === 30, 'the size slider and box set the brush size');
-    await page.$$eval('#options input[type="range"]', (els) => { els[1].value = '4'; els[1].dispatchEvent(new Event('input')); });
-    check(await app(() => __jamdraw.S.brush.smooth) === 4, 'the smoothing slider');
+    await t.button('#options', 'More…');
+    await page.$eval('#more input[type="range"]', (el) => { el.value = '4'; el.dispatchEvent(new Event('input')); });
+    check(await app(() => __jamdraw.S.brush.smooth) === 4, 'the smoothing slider (under More…)');
     // Line mode: a tap still makes a line.
     await page.click('#options [data-v="line"]');
     await t.click(await V(900, 900));

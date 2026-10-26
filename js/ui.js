@@ -46,6 +46,7 @@ export function setTool(t) {
   if (cur.finish) cur.finish(); else cur.cancel();
   S.tool = t;
   S.sketchMove = false;
+  $('#more').hidden = true;
   overlay.style.cursor = TOOLS[t].cursor;
   if (t !== 'node') { S.node.path = null; S.node.segs.clear(); }
   if (t === 'node' && S.sel.length === 1 && S.sel[0] instanceof paper.Path) S.node.path = S.sel[0];
@@ -90,7 +91,7 @@ function btn(label, fn, title = '') {
   const id = 'o' + Math.random().toString(36).slice(2, 8);
   return { html: `<button id="${id}" class="txt" title="${title}">${label}</button>`, bind() { document.getElementById(id).onclick = fn; } };
 }
-const hint = (t) => ({ html: `<span class="hint">${t}</span>`, bind() {} });
+const hint = (t) => ({ html: `<span class="hint" title="${t.replace(/"/g, '&quot;')}">${t}</span>`, bind() {} });
 
 function buildOptions() {
   const el = $('#options');
@@ -109,8 +110,16 @@ function buildOptions() {
       seg([['ink', 'Ink'], ['line', 'Line']], S.brush.mode, (v) => { S.brush.mode = v; }),
       toggle('Pressure', S.brush.pressure, (v) => { S.brush.pressure = v; }),
       toggle('Merge', S.brush.merge, (v) => { S.brush.merge = v; }),
-      range('Smooth', S.brush.smooth, 0.5, 8, 0.5, (v) => { S.brush.smooth = v; }),
-      hint('Ink: filled strokes in the Fill color; Merge joins touching strokes of the same color into one shape')],
+      range('Steady', S.brush.steady, 0, 10, 1, (v) => { S.brush.steady = v; }),
+      toggle('Magnet', S.brush.magnet, (v) => { S.brush.magnet = v; if (v && !S.sketch) toast('Load a sketch (Layers › Sketch to trace) for the magnet to follow'); }),
+      btn('More…', (e) => openMore(e.currentTarget, [
+        range('Smooth', S.brush.smooth, 0.5, 8, 0.5, (v) => { S.brush.smooth = v; }),
+        seg([['soft', 'Soft'], ['normal', 'Normal'], ['firm', 'Firm']], S.brush.feel, (v) => { S.brush.feel = v; }),
+        range('Thinnest %', Math.round(S.brush.thin * 100), 0, 100, 1, (v) => { S.brush.thin = v / 100; }),
+        toggle('Taper ends without pressure', S.brush.taper, (v) => { S.brush.taper = v; }),
+        range('Magnet pull %', Math.round(S.brush.pull * 100), 10, 100, 5, (v) => { S.brush.pull = v / 100; }),
+        hint('Ink: filled strokes in the Fill color · Merge joins touching strokes of the same color · Steady: the line trails the pointer on a string, smoothing wobbles · Magnet: lines are pulled onto the sketch\'s dark lines (Ctrl: draw freely) · Soft / Normal / Firm: how hard to press for a full line'),
+      ]), 'Smoothing, pressure feel, thinnest line, taper, magnet pull')],
     eraser: () => [range('Size', S.eraser.size, 2, 200, 1, (v) => { S.eraser.size = v; }), hint('Cuts through shapes and lines on the active layer')],
     shape: () => {
       const k = S.shape.kind;
@@ -133,6 +142,23 @@ function buildOptions() {
   const list = parts[S.tool]();
   el.innerHTML = list.map((p) => p.html).join('');
   list.forEach((p) => p.bind());
+}
+
+// More settings for the tool, in a small panel under its More… button; a tap outside closes it.
+function openMore(anchor, parts) {
+  const m = $('#more');
+  m.innerHTML = parts.map((p) => p.html).join('');
+  parts.forEach((p) => p.bind());
+  m.hidden = false;
+  const r = anchor.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(r.left, innerWidth - m.offsetWidth - 8)) + 'px';
+  m.style.top = r.bottom + 6 + 'px';
+  const outside = (e) => {
+    if (m.contains(e.target) || e.target === anchor) return;
+    m.hidden = true;
+    document.removeEventListener('pointerdown', outside, true);
+  };
+  setTimeout(() => document.addEventListener('pointerdown', outside, true));
 }
 
 // --- Colour, stroke, opacity

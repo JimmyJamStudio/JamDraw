@@ -201,6 +201,54 @@ export function fillAt(pt, layer, gapPx) {
 }
 const pageRect = () => new paper.Rectangle(0, 0, S.doc.w, S.doc.h);
 
+// ---------------------------------------------------------------- Magnet (brush strokes drawn onto the sketch's lines)
+// How dark each pixel of the sketch is (0 to 255, squared so black lines count far more than colors), at up to 2048
+// pixels on its longer side; worked out once per sketch. Null without a sketch.
+let ink = null;
+export function sketchInk() {
+  const sk = S.sketch;
+  if (!sk) return null;
+  if (ink && ink.src === sk.src) return ink;
+  const k = Math.min(1, 2048 / Math.max(sk.w, sk.h));
+  const w = Math.max(1, Math.round(sk.w * k)), h = Math.max(1, Math.round(sk.h * k));
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  c.getContext('2d').drawImage(document.getElementById('sketch'), 0, 0, w, h);
+  const d = c.getContext('2d').getImageData(0, 0, w, h).data, dark = new Uint8Array(w * h);
+  for (let i = 0, p = 0; i < dark.length; i++, p += 4) {
+    const t = Math.max(0, 110 - (0.299 * d[p] + 0.587 * d[p + 1] + 0.114 * d[p + 2])) / 110;
+    dark[i] = Math.round(t * t * 255 * (d[p + 3] / 255));
+  }
+  ink = { src: sk.src, dark, w, h, k };
+  return ink;
+}
+
+// Pulls a drawing point toward the middle of the dark line near it (within `reach` drawing units), by `strength`
+// (0 to 1). The middle of the darkness around the point, nearer pixels counting more (a bell curve, so the closest
+// line wins over a bigger dark patch further off), is found three times over, each time around the last one, so it
+// slides onto the middle of the line rather than stopping at its near edge. Points with no line near stay put.
+export function magnetPoint(pt, map, reach, strength) {
+  const m = sketchMatrix(S.sketch).scale(1 / map.k);
+  const r = reach * map.k / S.sketch.scale, step = Math.max(1, Math.ceil(r / 24)), bell = -2 / (r * r);
+  let p = m.inverseTransform(pt);
+  for (let pass = 0; pass < 3; pass++) {
+    let sw = 0, sx = 0, sy = 0;
+    for (let y = Math.max(0, Math.floor(p.y - r)); y <= Math.min(map.h - 1, p.y + r); y += step) {
+      for (let x = Math.max(0, Math.floor(p.x - r)); x <= Math.min(map.w - 1, p.x + r); x += step) {
+        const v = map.dark[y * map.w + x], d2 = (x + 0.5 - p.x) ** 2 + (y + 0.5 - p.y) ** 2;
+        if (!v || d2 > r * r) continue;
+        const wgt = v * Math.exp(bell * d2);
+        sw += wgt; sx += wgt * (x + 0.5); sy += wgt * (y + 0.5);
+      }
+    }
+    if (sw < 100) break;
+    p = new paper.Point(sx / sw, sy / sw);
+  }
+  const target = m.transform(p);
+  return pt.add(target.subtract(pt).multiply(strength));
+}
+
 // ---------------------------------------------------------------- Auto trace
 // The sketch as shapes, bottom first, lined up over it. Colors: one shape per main color (biggest at the bottom, each
 // tucked a pixel under the colors above it so no seams show); the background (the color most of the edge has) can

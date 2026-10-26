@@ -6,6 +6,9 @@ Jimmy Jam Studio to draw our own logo and art; offered as-is, free to use (MIT).
 - **Draw:** pen tool (click corners, drag curves), a pressure brush for drawing tablets and phone pens that turns
   strokes into clean vector shapes (Merge joins touching strokes into one), a Line brush, an eraser that cuts through
   shapes, and shapes (rounded rectangles, ellipses, polygons, stars)
+- **Brush feel:** Steady (the line trails the pointer on a string, smoothing out wobbles, great with a mouse), a
+  Magnet that pulls your strokes onto the sketch's lines as you trace (Ctrl to draw freely), and under More…:
+  pressure feel (Soft, Normal, Firm), the thinnest a pressure line gets, and tapered ends for strokes without pressure
 - **Color it in:** a fill bucket: tap inside an area closed by lines and it fills with a flat color, tucked under
   the lines, bridging small gaps (Close gaps). **Auto trace** turns the sketch into vector shapes on a new layer:
   one shape per main color (or just the dark ink), with a live preview and settings for colors, detail, smoothing

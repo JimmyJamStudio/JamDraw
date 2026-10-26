@@ -11,7 +11,8 @@ export const S = {
   stroke: '#1d1418',        // null = no stroke
   strokeWidth: 8,
   chip: 'fill',             // which colour the swatches and picker edit
-  brush: { size: 18, pressure: true, mode: 'ink', merge: true, smooth: 2 },
+  brush: { size: 18, pressure: true, mode: 'ink', merge: true, smooth: 2,
+    steady: 0, magnet: false, pull: 0.7, feel: 'normal', thin: 0.12, taper: false }, // see tools.js brush
   eraser: { size: 24 },
   bucket: { gap: 3 },       // fill bucket: close gaps in lines this many screen pixels wide
   text: { font: 'lilita-one-400', size: 140, spacing: 0, lineHeight: 1.1, align: 'center' },

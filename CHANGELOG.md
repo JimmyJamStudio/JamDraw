@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.7.0 - 2026-10-25
+
+How the brush feels: steadier lines, a magnet for tracing, and pressure the way you like it.
+
+### Added
+- **Steady** (brush options, 0 to 10): the line trails the pointer on an invisible string (shown while drawing), so
+  shaky bits shorter than the string never reach the line; when you lift, the line catches up to the pen. On a
+  test line it took out two thirds of the wobble. Great for drawing with a mouse.
+- **Magnet** (brush options): with a sketch loaded, your strokes are pulled onto the middle of the sketch's dark
+  lines as you trace over them. Points within about 14 screen pixels of a line are drawn onto it; elsewhere you draw
+  as usual. Hold Ctrl to draw freely. How strongly it pulls is under More… (70% by default, 100% lands right on the
+  line).
+- **More…** next to the brush options: Smooth (moved here), pressure **feel** (Soft needs a lighter touch for a full
+  line, Firm a heavier one), **Thinnest %** (how thin a light touch gets; 100% turns pressure off for width), and
+  **Taper ends without pressure** (mouse strokes, or with Pressure off, start and end thin).
+
+### Fixed
+- **The canvas jumped up and down when switching tools.** Some tools' options didn't fit at 1280 pixels wide and
+  got a scrollbar; long hints now end in "…" (hover for the whole hint), so every tool's options fit and the canvas
+  stays put.
+
 ## 0.6.0 - 2026-10-25
 
 Coloring in, and turning pictures into shapes.
